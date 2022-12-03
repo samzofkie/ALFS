@@ -1,0 +1,4 @@
+docker build -t alfs . 			# from inside alfs directory
+docker run -dit alfs   			# generates container id
+docker exec -it <container-id> bash 	# gives bash shell
+docker kill <container-id>
