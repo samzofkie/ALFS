@@ -1,5 +1,5 @@
 FROM alpine:3.17
-RUN apk add --no-cache bash binutils bison coreutils \
+RUN apk add --no-cache bash binutils bison build-base coreutils \
 	diffutils findutils gawk gcc grep gzip m4 make musl-dev\
 	patch perl python3 shadow sed tar texinfo xz
 
@@ -12,6 +12,6 @@ USER lfs
 WORKDIR /home/lfs
 
 # Copy Python script
-#COPY --chown=lfs:lfs ./build_cross_compiler.py .
-#RUN ./build_cross_compiler.py
+COPY --chown=lfs:lfs ./build_cross_compiler.py .
+RUN ./build_cross_compiler.py
 

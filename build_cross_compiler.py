@@ -39,7 +39,7 @@ def download_and_unpack_sources():
         os.system("rm " + tarball_filename)
 
 def build_cross_binutils():
-    os.chdir(os.environ["LFS"] + "/srcs/" + "/binutils-2.39")
+    os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
     try:
         os.mkdir("build")
     except FileExistsError:
@@ -55,10 +55,52 @@ def build_cross_binutils():
     os.system("make")
     os.system("make install")
 
+def build_cross_gcc():
+    os.chdir(os.environ["LFS"] + "/srcs/gcc-12.2.0")
+    os.system("./contrib/download_prerequisites")
+    os.system("sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64")
+    
+    os.chdir(os.environ["LFS"] + "/srcs")
+    try:
+        os.mkdir("gcc-build")
+    except FileExistsError:
+        os.system("rm -rf gcc-build")
+        os.mkdir("gcc-build")
+    os.chdir("gcc-build")
+
+    os.system( ("../gcc-12.2.0/configure --target={} "
+                "--prefix={}/tools "
+                "--with-glibc-version=2.36 "
+                "--with-sysroot={} "
+                "--with-newlib "
+                "--without-headers "
+                "--disable-nls "
+                "--disable-shared "
+                "--disable-multilib "
+                "--disable-decimal-float "
+                "--disable-threads "
+                "--disable-libatomic "
+                "--disable-libgomp "
+                "--disable-libquadmath "
+                "--disable-libssp "
+                "--disable-libvtv "
+                "--disable-libstdcxx "
+                "--enable-languages=c,c++").format(os.environ["LFS_TGT"], 
+                                                   os.environ["LFS"], os.environ["LFS"]) )
+    os.system("make")
+    os.system("make install")
+
 os.environ["LFS"] = "/home/lfs/lfs"
 os.environ["LFS_TGT"] = os.popen("uname -m").read().split("\n")[0] + "-lfs-linux-gnu"
 
 create_dir_structure()
 download_and_unpack_sources()
-build_cross_binutils()
+
+cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
+        os.environ["LFS_TGT"] + "-ld" 
+
+if not os.path.exists(cross_linker_filename):
+    build_cross_binutils()
+else:
+    print("cross binutils already built")
 
