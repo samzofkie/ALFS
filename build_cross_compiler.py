@@ -90,6 +90,16 @@ def build_cross_gcc():
     os.system("make")
     os.system("make install")
 
+def extract_linux_api_headers():
+    os.chdir(os.environ["LFS"] + "/srcs/linux-5.19.2")
+    os.system("make mrproper")
+    os.system("make headers")
+    os.system("find usr/include -type f ! -name '*.h' -delete")
+    os.system("cp -rv usr/include {}/usr".format(os.environ["LFS"]))
+
+
+
+
 os.environ["LFS"] = "/home/lfs/lfs"
 os.environ["LFS_TGT"] = os.popen("uname -m").read().split("\n")[0] + "-lfs-linux-gnu"
 
@@ -98,9 +108,23 @@ download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-ld" 
-
 if not os.path.exists(cross_linker_filename):
     build_cross_binutils()
 else:
     print("cross binutils already built")
+
+cross_compiler_filename = os.environ["LFS"] + "/tools/bin/" + \
+        os.environ["LFS_TGT"] + "-gcc"
+if not os.path.exists(cross_compiler_filename):
+    build_cross_gcc()
+else:
+    print("cross gcc already built")
+
+linux_headers_dirname = os.environ["LFS"] + "/usr/include/linux"
+if not os.path.exists(linux_headers_dirname):
+    extract_linux_api_headers()
+else:
+    print("linux api headers already extracted")
+
+
 
