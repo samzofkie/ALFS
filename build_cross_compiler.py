@@ -21,7 +21,7 @@ def create_dir_structure():
 tarball_urls = { "binutils" : "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.xz",
                  "gcc" : "https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz",
                  "linux" : "https://www.kernel.org/pub/linux/kernel/v5.x/linux-5.19.2.tar.xz",
-                 "glibc" : "https://ftp.gnu.org/gnu/glibc/glibc-2.36.tar.xz" }
+                 "glibc" : "https://ftp.gnu.org/gnu/glibc/glibc-2.36.tar.xz"}
 
 def download_and_unpack_sources():
     os.chdir(os.environ["LFS"] + "/srcs")
@@ -37,6 +37,15 @@ def download_and_unpack_sources():
         os.system("tar -xvf " + tarball_filename + " > /dev/null")
         print("removing " + tarball_filename)
         os.system("rm " + tarball_filename)
+    
+    glibc_patch_url = "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.36-fhs-1.patch"
+    glibc_patch_filename =  os.environ["LFS"] + "/" + glibc_patch_url.split("/")[-1]
+    if ("glibc-2.36-fhs-1.patch" in os.listdir()):
+        print("already have glibc patch")
+        return
+    print("downloading " + "glibc-2.36-fhs-1.patch...")
+    urllib.request.urlretrieve(glibc_patch_url, glibc_patch_filename)
+
 
 def build_cross_binutils():
     os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
@@ -97,6 +106,24 @@ def extract_linux_api_headers():
     os.system("find usr/include -type f ! -name '*.h' -delete")
     os.system("cp -rv usr/include {}/usr".format(os.environ["LFS"]))
 
+def build_glibc():
+    os.chdir(os.environ["LFS"] + "/srcs/glibc-2.36")
+    
+    os.system("ln -sfc ../lib/ld-linux-x86-64.so.2 " + \
+            os.environ["LFS"] + "/lib64")
+    os.system("ln -sfc ../lib/ld-linux-x86-64.so.2 " + \
+            os.environ["LFS"] + "/lib64/ld-lsb-x86-64.so.3")
+
+    os.system("patch -Np1 -i ../glibc-2.36-fhs-1.patch")
+
+    try:
+        os.mkdir("build")
+    except FileExistsError:
+        os.system("rm -rf build")
+        os.mkdir("build")
+    os.chdir("build")
+
+    os.system('echo "rootsbindir=/usr/sbin" > configparms')
 
 
 
