@@ -49,6 +49,16 @@ def download_and_unpack_sources():
     urllib.request.urlretrieve(glibc_patch_url, glibc_patch_filename)
 
 
+def build_if_file_missing(file, build_func, build_target_name):
+    cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
+            os.environ["LFS_TGT"] + "-ld" 
+    if not os.path.exists(file):
+        build_func()
+    else:
+        print(build_target_name + " already built")
+
+
+
 def exec_commands_with_failure(commands):
     for command in commands:
         ret = os.system(command)
@@ -56,6 +66,7 @@ def exec_commands_with_failure(commands):
             print(command + " returned " + str(ret))
             sys.exit(1)
 
+# Build commands -------------------------------------------------
 
 def build_cross_binutils():
     os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
@@ -122,15 +133,12 @@ def extract_linux_api_headers():
 
 
 def build_glibc():
-    os.chdir(os.environ["LFS"] + "/srcs/glibc-2.36")
-    
+    os.chdir(os.environ["LFS"] + "/srcs/glibc-2.36") 
     os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64")
     os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64/ld-lsb-x86-64.so.3")
-
     os.system("patch -Np1 -i ../glibc-2.36-fhs-1.patch")
-
     try:
         os.mkdir("build")
     except FileExistsError:
@@ -138,7 +146,6 @@ def build_glibc():
         os.mkdir("build")
     os.chdir("build")
     os.system('echo "rootsbindir=/usr/sbin" > configparms')
-    
     build_commands = [("../configure --prefix=/usr "
                "--host={} --build=$(../scripts/config.guess) "
                "--enable-kernel-3.2 "
@@ -147,10 +154,7 @@ def build_glibc():
                                                   os.environ["LFS"]),
                "make", "make DESTDIR={} install".format(os.environ["LFS"])]
     exec_commands_with_failure(build_commands)
- 
     os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
-
-
 
 
 os.environ["LFS"] = "/home/lfs/lfs"
@@ -160,24 +164,32 @@ create_dir_structure()
 download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
-        os.environ["LFS_TGT"] + "-ld" 
-if not os.path.exists(cross_linker_filename):
-    build_cross_binutils()
-else:
-    print("cross binutils already built")
+        os.environ["LFS_TGT"] + "-ld"
+build_if_file_missing(cross_linker_filename, build_cross_binutils,
+                      "cross binutils")
+
+#if not os.path.exists(cross_linker_filename):
+#    build_cross_binutils()
+#else:
+#    print("cross binutils already built")
 
 cross_compiler_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-gcc"
-if not os.path.exists(cross_compiler_filename):
-    build_cross_gcc()
-else:
-    print("cross gcc already built")
+build_if_file_missing(cross_compiler_filename, build_cross_gcc,
+                      "cross gcc")
+
+#if not os.path.exists(cross_compiler_filename):
+#    build_cross_gcc()
+#else:
+#    print("cross gcc already built")
 
 linux_headers_dirname = os.environ["LFS"] + "/usr/include/linux"
-if not os.path.exists(linux_headers_dirname):
-    extract_linux_api_headers()
-else:
-    print("linux api headers already extracted")
+build_if_file_missing(linux_headers_dirname, extract_linux_api_headers,
+                      "linux api headers")
+#if not os.path.exists(linux_headers_dirname):
+#    extract_linux_api_headers()
+#else:
+#    print("linux api headers already extracted")
 
 
 
