@@ -2,7 +2,7 @@
 
 import os
 import urllib.request
-
+import sys
 
 lfs_dir_structure = [ "etc", "var", "usr", "tools",
                       "lib64", "srcs",
@@ -18,10 +18,12 @@ def create_dir_structure():
         pass
     print("directory structure is created in " + os.environ["LFS"])
 
+
 tarball_urls = { "binutils" : "https://ftp.gnu.org/gnu/binutils/binutils-2.39.tar.xz",
                  "gcc" : "https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz",
                  "linux" : "https://www.kernel.org/pub/linux/kernel/v5.x/linux-5.19.2.tar.xz",
                  "glibc" : "https://ftp.gnu.org/gnu/glibc/glibc-2.36.tar.xz"}
+
 
 def download_and_unpack_sources():
     os.chdir(os.environ["LFS"] + "/srcs")
@@ -39,12 +41,20 @@ def download_and_unpack_sources():
         os.system("rm " + tarball_filename)
     
     glibc_patch_url = "https://www.linuxfromscratch.org/patches/downloads/glibc/glibc-2.36-fhs-1.patch"
-    glibc_patch_filename =  os.environ["LFS"] + "/" + glibc_patch_url.split("/")[-1]
+    glibc_patch_filename =  os.environ["LFS"] + "/srcs/" + glibc_patch_url.split("/")[-1]
     if ("glibc-2.36-fhs-1.patch" in os.listdir()):
         print("already have glibc patch")
         return
     print("downloading " + "glibc-2.36-fhs-1.patch...")
     urllib.request.urlretrieve(glibc_patch_url, glibc_patch_filename)
+
+
+def exec_commands_with_failure(commands):
+    for command in commands:
+        ret = os.system(command)
+        if ret != 0:
+            print(command + " returned " + str(ret))
+            sys.exit(1)
 
 
 def build_cross_binutils():
@@ -55,14 +65,16 @@ def build_cross_binutils():
         os.system("rm -rf build")
         os.mkdir("build")
     os.chdir("./build")
-    os.system( ("../configure --prefix={}/tools "
+
+    build_commands = [ ("../configure --prefix={}/tools "
               "--with-sysroot={} "
               "--target={} "
               "--disable-nlfs "
               "--enable-gprofng=no "
-              "--disable-werror").format(os.environ["LFS"], os.environ["LFS"], os.environ["LFS_TGT"]))
-    os.system("make")
-    os.system("make install")
+              "--disable-werror").format(os.environ["LFS"], os.environ["LFS"], os.environ["LFS_TGT"]),
+              "make", "make install" ]
+    exec_commands_with_failure(build_commands)
+
 
 def build_cross_gcc():
     os.chdir(os.environ["LFS"] + "/srcs/gcc-12.2.0")
@@ -77,7 +89,7 @@ def build_cross_gcc():
         os.mkdir("gcc-build")
     os.chdir("gcc-build")
 
-    os.system( ("../gcc-12.2.0/configure --target={} "
+    build_commands = [("../gcc-12.2.0/configure --target={} "
                 "--prefix={}/tools "
                 "--with-glibc-version=2.36 "
                 "--with-sysroot={} "
@@ -95,23 +107,26 @@ def build_cross_gcc():
                 "--disable-libvtv "
                 "--disable-libstdcxx "
                 "--enable-languages=c,c++").format(os.environ["LFS_TGT"], 
-                                                   os.environ["LFS"], os.environ["LFS"]) )
-    os.system("make")
-    os.system("make install")
+                                                   os.environ["LFS"], 
+                                                   os.environ["LFS"]),
+                      "make", "make install"]
+    exec_commands_with_failure(build_commands)
+
 
 def extract_linux_api_headers():
     os.chdir(os.environ["LFS"] + "/srcs/linux-5.19.2")
-    os.system("make mrproper")
-    os.system("make headers")
-    os.system("find usr/include -type f ! -name '*.h' -delete")
-    os.system("cp -rv usr/include {}/usr".format(os.environ["LFS"]))
+    commands = ["make mrproper", "make headers"
+            "find usr/include -type f ! -name '*.h' -delete",
+            "cp -rv usr/include {}/usr".format(os.environ["LFS"])]
+    exec_commands_with_failure(commands)
+
 
 def build_glibc():
     os.chdir(os.environ["LFS"] + "/srcs/glibc-2.36")
     
-    os.system("ln -sfc ../lib/ld-linux-x86-64.so.2 " + \
+    os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64")
-    os.system("ln -sfc ../lib/ld-linux-x86-64.so.2 " + \
+    os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64/ld-lsb-x86-64.so.3")
 
     os.system("patch -Np1 -i ../glibc-2.36-fhs-1.patch")
@@ -122,8 +137,19 @@ def build_glibc():
         os.system("rm -rf build")
         os.mkdir("build")
     os.chdir("build")
-
     os.system('echo "rootsbindir=/usr/sbin" > configparms')
+    
+    build_commands = [("../configure --prefix=/usr "
+               "--host={} --build=$(../scripts/config.guess) "
+               "--enable-kernel-3.2 "
+               "--with-headers={}/usr/include "
+               "libc_cv_slibdir=/usr/lib").format(os.environ["LFS_TGT"],
+                                                  os.environ["LFS"]),
+               "make", "make DESTDIR={} install".format(os.environ["LFS"])]
+    exec_commands_with_failure(build_commands)
+ 
+    os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
+
 
 
 
