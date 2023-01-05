@@ -66,7 +66,6 @@ def exec_commands_with_failure(commands):
             print(command + " returned " + str(ret))
             sys.exit(1)
 
-# Build commands -------------------------------------------------
 
 def build_cross_binutils():
     os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
@@ -122,11 +121,14 @@ def build_cross_gcc():
                                                    os.environ["LFS"]),
                       "make", "make install"]
     exec_commands_with_failure(build_commands)
+    os.chdir(os.environ["LFS"] + "/srcs/gcc-12.2.0")
+    os.system("cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
+`dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/install-tools/include/limits.h")
 
 
 def extract_linux_api_headers():
     os.chdir(os.environ["LFS"] + "/srcs/linux-5.19.2")
-    commands = ["make mrproper", "make headers"
+    commands = ["make mrproper", "make headers",
             "find usr/include -type f ! -name '*.h' -delete",
             "cp -rv usr/include {}/usr".format(os.environ["LFS"])]
     exec_commands_with_failure(commands)
@@ -155,10 +157,38 @@ def build_glibc():
                "make", "make DESTDIR={} install".format(os.environ["LFS"])]
     exec_commands_with_failure(build_commands)
     os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
+    ### Dont forget to do the readelf sanity check bro!
+    os.system(os.environ["LFS"] + "/tools/libexec/{}/12.2.0/install-tools/mkheaders")
+
+def build_libstdcpp():
+    os.chdir(os.environ["LFS"] + "/srcs")
+    try:
+        os.mkdir("gcc-build")
+    except FileExistsError:
+        os.system("rm -rf gcc-build")
+        os.mkdir("gcc-build")
+    os.chdir("gcc-build")
+    build_commands = [ ("../gcc-12.2.0/libstdc++-v3/configure "
+                        "--host={} "
+                        "--build=$(../gcc-12.2.0/config.guess) "
+                        "--prefix=/usr "
+                        "--disable-multilib --disable-nls "
+                        "--disable-libstdcxx-pch "
+                        "--with-gxx-include-dir=/tools/{}/"
+                        "include/c++/12.2.0".format(os.environ["LFS_TGT"],
+                                                    os.environ["LFS_TGT"])),
+                        "make", "make DESTDIR={} install".format(os.environ["LFS"]) ]
+    exec_commands_with_failure(build_commands)
+    os.system("rm -v {}/usr/lib/lib{stdc++,stdc++fs,supc++}.la".format(os.environ["LFS"]))
 
 
-os.environ["LFS"] = "/home/lfs/lfs"
-os.environ["LFS_TGT"] = os.popen("uname -m").read().split("\n")[0] + "-lfs-linux-gnu"
+# Main
+try:
+    for var in ["LFS", "LFS_TGT"]:
+        os.environ[var]
+except KeyError:
+    print("{} env var not set. bye!".format(var))
+    sys.exit(1)
 
 create_dir_structure()
 download_and_unpack_sources()
@@ -168,28 +198,36 @@ cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
 build_if_file_missing(cross_linker_filename, build_cross_binutils,
                       "cross binutils")
 
-#if not os.path.exists(cross_linker_filename):
-#    build_cross_binutils()
-#else:
-#    print("cross binutils already built")
-
 cross_compiler_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-gcc"
 build_if_file_missing(cross_compiler_filename, build_cross_gcc,
                       "cross gcc")
 
+linux_headers_dirname = os.environ["LFS"] + "/usr/include/linux"
+build_if_file_missing(linux_headers_dirname, extract_linux_api_headers,
+                      "linux api headers")
+
+# glibc
+
+# libstdc++
+
+
+
+
+
+
+
+#if not os.path.exists(cross_linker_filename):
+#    build_cross_binutils()
+#else:
+#    print("cross binutils already built")
 #if not os.path.exists(cross_compiler_filename):
 #    build_cross_gcc()
 #else:
 #    print("cross gcc already built")
-
-linux_headers_dirname = os.environ["LFS"] + "/usr/include/linux"
-build_if_file_missing(linux_headers_dirname, extract_linux_api_headers,
-                      "linux api headers")
 #if not os.path.exists(linux_headers_dirname):
 #    extract_linux_api_headers()
 #else:
 #    print("linux api headers already extracted")
-
 
 
