@@ -47,6 +47,14 @@ def download_and_unpack_sources():
             red_print('\x1b[1K' + "  failed to download {}!".format(package_name))
             continue
         if ".tar" in dest:
+            if "tzdata2022c" in dest:
+                os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
+                os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
+                print('\x1b[1K' + "unpacking " + package_name, end='\r')
+                os.system("tar -xvf " + dest + " > /dev/null")
+                os.system("rm " + dest)
+                os.chdir(os.environ["LFS"] + "/srcs")
+                continue
             print('\x1b[1K' + "unpacking " + package_name, end='\r')
             os.system("tar -xvf " + dest + " > /dev/null")
             os.system("rm " + dest) 
