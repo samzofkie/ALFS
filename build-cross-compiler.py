@@ -66,6 +66,10 @@ def exec_commands_with_failure(commands):
             print(command + " returned " + str(ret))
             sys.exit(1)
 
+def lfs_dir_snapshot():
+    os.chdir(os.environ["LFS"])
+    snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
+    return set(snapshot)
 
 def build_cross_binutils():
     os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
@@ -157,8 +161,8 @@ def build_glibc():
                "make", "make DESTDIR={} install".format(os.environ["LFS"])]
     exec_commands_with_failure(build_commands)
     os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
-    ### Dont forget to do the readelf sanity check bro!
-    os.system(os.environ["LFS"] + "/tools/libexec/{}/12.2.0/install-tools/mkheaders")
+    os.system(os.environ["LFS"] + \
+            "/tools/libexec/gcc/{}/12.2.0/install-tools/mkheaders".format(os.environ["LFS_TGT"]))
 
 def build_libstdcpp():
     os.chdir(os.environ["LFS"] + "/srcs")
@@ -179,7 +183,8 @@ def build_libstdcpp():
                                                     os.environ["LFS_TGT"])),
                         "make", "make DESTDIR={} install".format(os.environ["LFS"]) ]
     exec_commands_with_failure(build_commands)
-    os.system("rm -v {}/usr/lib/lib{stdc++,stdc++fs,supc++}.la".format(os.environ["LFS"]))
+    for fname in ["stdc++", "stdc++fs", "supc++"]:
+        os.system("rm -v {}/usr/lib/lib{}.la".format(os.environ["LFS"], fname))
 
 
 # Main
@@ -197,37 +202,13 @@ cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-ld"
 build_if_file_missing(cross_linker_filename, build_cross_binutils,
                       "cross binutils")
-
 cross_compiler_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-gcc"
 build_if_file_missing(cross_compiler_filename, build_cross_gcc,
                       "cross gcc")
-
-linux_headers_dirname = os.environ["LFS"] + "/usr/include/linux"
-build_if_file_missing(linux_headers_dirname, extract_linux_api_headers,
-                      "linux api headers")
-
-# glibc
-
-# libstdc++
-
-
-
-
-
-
-
-#if not os.path.exists(cross_linker_filename):
-#    build_cross_binutils()
-#else:
-#    print("cross binutils already built")
-#if not os.path.exists(cross_compiler_filename):
-#    build_cross_gcc()
-#else:
-#    print("cross gcc already built")
-#if not os.path.exists(linux_headers_dirname):
-#    extract_linux_api_headers()
-#else:
-#    print("linux api headers already extracted")
-
-
+build_if_file_missing(os.environ["LFS"] + "/usr/include/linux", 
+                      extract_linux_api_headers, "linux api headers")
+build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
+                      build_glibc, "glibc")
+build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
+                      build_libstdc++, "libstdc++")
