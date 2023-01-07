@@ -5,6 +5,7 @@ import urllib.request
 import sys
 
 from build_cross_compiler import *
+from cross_compile_temp_tools import *
 
 lfs_dir_structure = [ "etc", "var", "usr", "tools",
                       "lib64", "srcs",
@@ -88,7 +89,7 @@ except KeyError:
     sys.exit(1)
 
 create_dir_structure()
-download_and_unpack_sources()
+#download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-ld"
