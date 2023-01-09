@@ -13,9 +13,11 @@ def build_cross_binutils():
     build_commands = [ ("../configure --prefix={}/tools "
               "--with-sysroot={} "
               "--target={} "
-              "--disable-nlfs "
+              "--disable-nls "
               "--enable-gprofng=no "
-              "--disable-werror").format(os.environ["LFS"], os.environ["LFS"], os.environ["LFS_TGT"]),
+              "--disable-werror").format(os.environ["LFS"], 
+                                         os.environ["LFS"], 
+                                         os.environ["LFS_TGT"]),
               "make", "make install" ]
     exec_commands_with_failure(build_commands)
 

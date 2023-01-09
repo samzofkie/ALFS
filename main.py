@@ -26,55 +26,39 @@ def create_dir_structure():
 def red_print(s):
     print("\33[31m" + s + "\33[0m")
 
-wget_list_url = "https://mirror.download.it/lfs/pub/lfs/lfs-packages/11.2/wget-list"
+def read_tarball_urls():
+    os.chdir("/home/lfs")
+    with open("tarball_urls",'r') as f:
+        urls = f.readlines()
+    return [url.strip('\n') for url in urls]
 
 def download_and_unpack_sources():
+    urls = read_tarball_urls()
     os.chdir(os.environ["LFS"] + "/srcs")
-    if "wget-list" not in os.listdir():
-        os.system("wget {}".format(wget_list_url))
-    with open("wget-list", "r") as f:
-        urls = f.readlines()
-    urls = [url.strip('\n') for url in urls]
     for url in urls:
         package_name = url.split("/")[-1]
         dest = os.environ["LFS"] + "/srcs/" + package_name
         package_name = package_name.split(".tar")[0]
         if package_name in os.listdir():
             continue
-        # '\x1b[1K' is a magic clear line character!
-        print('\x1b[1K' + "downloading {}...".format(package_name), end='\r')
+        print("downloading {}...".format(package_name))
         try:
             urllib.request.urlretrieve(url, dest)
         except:
-            red_print('\x1b[1K' + "  failed to download {}!".format(package_name))
+            red_print("  failed to download {}!".format(package_name))
             continue
         if ".tar" in dest:
             if "tzdata2022c" in dest:
                 os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
                 os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
-                print('\x1b[1K' + "unpacking " + package_name, end='\r')
+                print("unpacking " + package_name)
                 os.system("tar -xvf " + dest + " > /dev/null")
                 os.system("rm " + dest)
                 os.chdir(os.environ["LFS"] + "/srcs")
                 continue
-            print('\x1b[1K' + "unpacking " + package_name, end='\r')
+            print("unpacking " + package_name + "...")
             os.system("tar -xvf " + dest + " > /dev/null")
             os.system("rm " + dest) 
-
-"""def build_if_file_missing(file, build_func, build_target_name):
-    cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
-            os.environ["LFS_TGT"] + "-ld" 
-    if not os.path.exists(file):
-        build_func()
-    else:
-        print(build_target_name + " already built")
-
-def exec_commands_with_failure(commands):
-    for command in commands:
-        ret = os.system(command)
-        if ret != 0:
-            print(command + " returned " + str(ret))
-            sys.exit(1)"""
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
@@ -89,6 +73,7 @@ except KeyError:
     print("{} env var not set. bye!".format(var))
     sys.exit(1)
 
+"""
 create_dir_structure()
 download_and_unpack_sources()
 
@@ -106,4 +91,5 @@ build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
                       build_glibc, "glibc")
 build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
                       build_libstdcpp, "libstdc++")
+                      """
 
