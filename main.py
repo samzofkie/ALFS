@@ -1,4 +1,4 @@
-#!/usr/env python3
+#!/usr/bin/env python3
 
 import os
 import urllib.request
@@ -6,6 +6,8 @@ import sys
 
 from build_cross_compiler import *
 from cross_compile_temp_tools import *
+from utils import build_if_file_missing, exec_commands_with_failure
+
 
 lfs_dir_structure = [ "etc", "var", "usr", "tools",
                       "lib64", "srcs",
@@ -38,13 +40,12 @@ def download_and_unpack_sources():
         dest = os.environ["LFS"] + "/srcs/" + package_name
         package_name = package_name.split(".tar")[0]
         if package_name in os.listdir():
-            #print("already have source for " + package_name)
             continue
-        print("downloading {}...".format(package_name), end='\r')
+        # '\x1b[1K' is a magic clear line character!
+        print('\x1b[1K' + "downloading {}...".format(package_name), end='\r')
         try:
             urllib.request.urlretrieve(url, dest)
         except:
-            # '\x1b[1K' is a magic clear line character!
             red_print('\x1b[1K' + "  failed to download {}!".format(package_name))
             continue
         if ".tar" in dest:
@@ -60,7 +61,7 @@ def download_and_unpack_sources():
             os.system("tar -xvf " + dest + " > /dev/null")
             os.system("rm " + dest) 
 
-def build_if_file_missing(file, build_func, build_target_name):
+"""def build_if_file_missing(file, build_func, build_target_name):
     cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
             os.environ["LFS_TGT"] + "-ld" 
     if not os.path.exists(file):
@@ -73,7 +74,7 @@ def exec_commands_with_failure(commands):
         ret = os.system(command)
         if ret != 0:
             print(command + " returned " + str(ret))
-            sys.exit(1)
+            sys.exit(1)"""
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
@@ -89,7 +90,7 @@ except KeyError:
     sys.exit(1)
 
 create_dir_structure()
-#download_and_unpack_sources()
+download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
         os.environ["LFS_TGT"] + "-ld"

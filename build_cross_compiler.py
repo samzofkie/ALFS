@@ -1,4 +1,5 @@
 import os
+from utils import exec_commands_with_failure
 
 def build_cross_binutils():
     os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")

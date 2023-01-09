@@ -1,5 +1,5 @@
 import os
-from main import exec_commands_with_failure
+from utils import exec_commands_with_failure
 
 def build_temp_m4():
     os.chdir(os.environ["LFS"] + "/srcs" + "/m4-1.4.19")
