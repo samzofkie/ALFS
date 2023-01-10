@@ -47,18 +47,16 @@ def download_and_unpack_sources():
         except:
             red_print("  failed to download {}!".format(package_name))
             continue
-        if ".tar" in dest:
-            if "tzdata2022c" in dest:
-                os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
-                os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
-                print("unpacking " + package_name)
-                os.system("tar -xvf " + dest + " > /dev/null")
-                os.system("rm " + dest)
-                os.chdir(os.environ["LFS"] + "/srcs")
-                continue
-            print("unpacking " + package_name + "...")
-            os.system("tar -xvf " + dest + " > /dev/null")
-            os.system("rm " + dest) 
+        if ".tar" not in dest:
+            continue
+        if "tzdata2022c" in dest:
+            os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
+            os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
+        print("unpacking " + package_name + "...")
+        os.system("tar -xvf " + dest + " > /dev/null")
+        os.system("rm " + dest)
+        if "tzdata2022c" in dest:
+            os.chdir(os.environ["LFS"] + "/srcs")
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
@@ -73,8 +71,8 @@ except KeyError:
     print("{} env var not set. bye!".format(var))
     sys.exit(1)
 
-"""
-create_dir_structure()
+
+"""create_dir_structure()
 download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
@@ -92,4 +90,5 @@ build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
 build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
                       build_libstdcpp, "libstdc++")
                       """
+
 

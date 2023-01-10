@@ -20,6 +20,12 @@ def build_cross_binutils():
                                          os.environ["LFS_TGT"]),
               "make", "make install" ]
     exec_commands_with_failure(build_commands)
+    triplet_tool_dir = os.environ["LFS"] + "/tools/" + \
+            os.environ["LFS_TGT"] + "/bin/"
+    tool_bin = os.environ["LFS"] + "/tools/bin/"
+    for tool in os.listdir(triplet_tool_dir):
+        os.system("ln {} {}".format(triplet_tool_dir + tool,
+                                    tool_bin + tool))
 
 
 def build_cross_gcc():
