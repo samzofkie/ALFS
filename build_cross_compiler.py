@@ -1,15 +1,10 @@
 import os
-from utils import exec_commands_with_failure
+from utils import exec_commands_with_failure, try_make_build_dir, find_source_dir
 
 def build_cross_binutils():
-    os.chdir(os.environ["LFS"] + "/srcs" + "/binutils-2.39")
-    try:
-        os.mkdir("build")
-    except FileExistsError:
-        os.system("rm -rf build")
-        os.mkdir("build")
-    os.chdir("./build")
-
+    src_dir_path = find_source_dir("binutils")
+    os.chdir(src_dir_path)
+    try_make_build_dir(src_dir_path + "/build") 
     build_commands = [ ("../configure --prefix={}/tools "
               "--with-sysroot={} "
               "--target={} "
@@ -27,21 +22,13 @@ def build_cross_binutils():
         os.system("ln {} {}".format(triplet_tool_dir + tool,
                                     tool_bin + tool))
 
-
 def build_cross_gcc():
-    os.chdir(os.environ["LFS"] + "/srcs/gcc-12.2.0")
+    src_dir_path = find_source_dir("gcc")
+    os.chdir(src_dir_path)
     os.system("./contrib/download_prerequisites")
     os.system("sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64")
-    
-    os.chdir(os.environ["LFS"] + "/srcs")
-    try:
-        os.mkdir("gcc-build")
-    except FileExistsError:
-        os.system("rm -rf gcc-build")
-        os.mkdir("gcc-build")
-    os.chdir("gcc-build")
-
-    build_commands = [("../gcc-12.2.0/configure --target={} "
+    try_make_build_dir(src_dir_path + "/../gcc-build") 
+    build_commands = [(src_dir_path + "/configure --target={} "
                 "--prefix={}/tools "
                 "--with-glibc-version=2.36 "
                 "--with-sysroot={} "
@@ -63,32 +50,28 @@ def build_cross_gcc():
                                                    os.environ["LFS"]),
                       "make", "make install"]
     exec_commands_with_failure(build_commands)
-    os.chdir(os.environ["LFS"] + "/srcs/gcc-12.2.0")
+    os.chdir(src_dir_path)
     os.system("cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
 `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/install-tools/include/limits.h")
-
+    os.chdir(os.environ["LFS"] + "/srcs/")
+    os.system("rm -rf gcc-build")
 
 def extract_linux_api_headers():
-    os.chdir(os.environ["LFS"] + "/srcs/linux-5.19.2")
-    commands = ["make mrproper", "make headers",
+    src_dir_path = find_source_dir("linux")
+    os.chdir(src_dir_path)
+    exec_commands_with_failure(["make mrproper", "make headers",
             "find usr/include -type f ! -name '*.h' -delete",
-            "cp -rv usr/include {}/usr".format(os.environ["LFS"])]
-    exec_commands_with_failure(commands)
-
+            "cp -rv usr/include {}/usr".format(os.environ["LFS"])])
 
 def build_glibc():
-    os.chdir(os.environ["LFS"] + "/srcs/glibc-2.36") 
+    src_dir_path = find_source_dir("glibc")
+    os.chdir(src_dir_path)
     os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64")
     os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
             os.environ["LFS"] + "/lib64/ld-lsb-x86-64.so.3")
     os.system("patch -Np1 -i ../glibc-2.36-fhs-1.patch")
-    try:
-        os.mkdir("build")
-    except FileExistsError:
-        os.system("rm -rf build")
-        os.mkdir("build")
-    os.chdir("build")
+    try_make_build_dir(src_dir_path + "/build")
     os.system('echo "rootsbindir=/usr/sbin" > configparms')
     build_commands = [("../configure --prefix=/usr "
                "--host={} --build=$(../scripts/config.guess) "
@@ -103,14 +86,9 @@ def build_glibc():
             "/tools/libexec/gcc/{}/12.2.0/install-tools/mkheaders".format(os.environ["LFS_TGT"]))
 
 def build_libstdcpp():
-    os.chdir(os.environ["LFS"] + "/srcs")
-    try:
-        os.mkdir("gcc-build")
-    except FileExistsError:
-        os.system("rm -rf gcc-build")
-        os.mkdir("gcc-build")
-    os.chdir("gcc-build")
-    build_commands = [ ("../gcc-12.2.0/libstdc++-v3/configure "
+    src_dir_path = find_source_dir("gcc")
+    try_make_build_dir(os.environ["LFS"] + "/srcs/gcc-build")
+    build_commands = [ (src_dir_path + "/libstdc++-v3/configure "
                         "--host={} "
                         "--build=$(../gcc-12.2.0/config.guess) "
                         "--prefix=/usr "

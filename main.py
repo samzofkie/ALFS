@@ -72,7 +72,7 @@ except KeyError:
     sys.exit(1)
 
 
-"""create_dir_structure()
+create_dir_structure()
 download_and_unpack_sources()
 
 cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
@@ -89,6 +89,5 @@ build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
                       build_glibc, "glibc")
 build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
                       build_libstdcpp, "libstdc++")
-                      """
 
 
