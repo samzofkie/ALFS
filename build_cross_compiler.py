@@ -50,7 +50,7 @@ def build_cross_gcc():
                                                    os.environ["LFS"], 
                                                    os.environ["LFS"]),
                       "make", "make install"]
-    exec_commands_with_failure(build_commands)
+    exec_commands_with_failure_and_logging(build_commands, os.environ["LFS"] + "/gcc")
     os.chdir(src_dir_path)
     os.system("cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
 `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/install-tools/include/limits.h")
@@ -60,9 +60,9 @@ def build_cross_gcc():
 def extract_linux_api_headers():
     src_dir_path = find_source_dir("linux")
     os.chdir(src_dir_path)
-    exec_commands_with_failure(["make mrproper", "make headers",
+    exec_commands_with_failure_and_logging(["make mrproper", "make headers",
             "find usr/include -type f ! -name '*.h' -delete",
-            "cp -rv usr/include {}/usr".format(os.environ["LFS"])])
+            "cp -rv usr/include {}/usr".format(os.environ["LFS"])], os.environ["LFS"] + "/linux_headers")
 
 def build_glibc():
     src_dir_path = find_source_dir("glibc")
@@ -81,7 +81,7 @@ def build_glibc():
                "libc_cv_slibdir=/usr/lib").format(os.environ["LFS_TGT"],
                                                   os.environ["LFS"]),
                "make", "make DESTDIR={} install".format(os.environ["LFS"])]
-    exec_commands_with_failure(build_commands)
+    exec_commands_with_failure_and_logging(build_commands, os.environ["LFS"] + "/glibc")
     os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
     os.system(os.environ["LFS"] + \
             "/tools/libexec/gcc/{}/12.2.0/install-tools/mkheaders".format(os.environ["LFS_TGT"]))
@@ -99,7 +99,7 @@ def build_libstdcpp():
                         "include/c++/12.2.0".format(os.environ["LFS_TGT"],
                                                     os.environ["LFS_TGT"])),
                         "make", "make DESTDIR={} install".format(os.environ["LFS"]) ]
-    exec_commands_with_failure(build_commands)
+    exec_commands_with_failure_and_logging(build_commands, os.environ["LFS"] + "/libstdcpp")
     for fname in ["stdc++", "stdc++fs", "supc++"]:
         os.system("rm -v {}/usr/lib/lib{}.la".format(os.environ["LFS"], fname))
 

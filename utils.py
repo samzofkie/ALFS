@@ -17,7 +17,7 @@ def exec_commands_with_failure(commands):
 def exec_commands_with_failure_and_logging(commands, log_file_path):
     if not os.path.exists(log_file_path):
         os.system("touch " + log_file_path)
-    commands = [command + " 2>&1 | tee " + log_file_path for command in commands]
+    commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
     exec_commands_with_failure(commands)
 
 def try_make_build_dir(path):
@@ -33,6 +33,7 @@ def find_source_dir(package):
     os.chdir(lfs_src_path)
     packages = os.listdir()
     res = [p for p in packages if package in p]
+    res = [p for p in res if ".patch" not in p]
     if len(res) > 1:
         print("ambiguous package name passed to find_source_dir: " + \
                 package)

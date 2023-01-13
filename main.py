@@ -30,7 +30,8 @@ def read_tarball_urls():
     os.chdir("/home/lfs")
     with open("tarball_urls",'r') as f:
         urls = f.readlines()
-    return [url.strip('\n') for url in urls]
+    urls = [url.strip('\n') for url in urls]
+    return [url for url in urls if url != '']
 
 def download_and_unpack_sources():
     urls = read_tarball_urls()
