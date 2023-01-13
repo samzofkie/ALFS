@@ -1,8 +1,9 @@
 import os
-from utils import exec_commands_with_failure, try_make_build_dir, find_source_dir
+from utils import exec_commands_with_failure, try_make_build_dir, find_source_dir, exec_commands_with_failure_and_logging
 
 def build_cross_binutils():
     src_dir_path = find_source_dir("binutils")
+    log_file_path = os.environ["LFS"] + "/binutils"
     os.chdir(src_dir_path)
     try_make_build_dir(src_dir_path + "/build") 
     build_commands = [ ("../configure --prefix={}/tools "
@@ -14,7 +15,7 @@ def build_cross_binutils():
                                          os.environ["LFS"], 
                                          os.environ["LFS_TGT"]),
               "make", "make install" ]
-    exec_commands_with_failure(build_commands)
+    exec_commands_with_failure_and_logging(build_commands, log_file_path)
     triplet_tool_dir = os.environ["LFS"] + "/tools/" + \
             os.environ["LFS_TGT"] + "/bin/"
     tool_bin = os.environ["LFS"] + "/tools/bin/"

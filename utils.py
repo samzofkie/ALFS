@@ -14,6 +14,12 @@ def exec_commands_with_failure(commands):
             print(command + " returned " + str(ret))
             sys.exit(1)
 
+def exec_commands_with_failure_and_logging(commands, log_file_path):
+    if not os.path.exists(log_file_path):
+        os.system("touch " + log_file_path)
+    commands = [command + " 2>&1 | tee " + log_file_path for command in commands]
+    exec_commands_with_failure(commands)
+
 def try_make_build_dir(path):
     try:
         os.mkdir(path)
