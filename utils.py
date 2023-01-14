@@ -43,3 +43,8 @@ def find_source_dir(package):
         sys.exit(1)
     return lfs_src_path + res[0]
 
+def lfs_dir_snapshot():
+    os.chdir(os.environ["LFS"])
+    snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
+    return set(snapshot)
+

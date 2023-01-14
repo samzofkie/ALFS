@@ -91,4 +91,16 @@ build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
 build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
                       build_libstdcpp, "libstdc++")
 
+build_if_file_missing(os.environ["LFS"] + "/usr/bin/m4", build_temp_m4,
+                      "m4")
 
+def build_w_snapshots(build_func):
+    snap1 = lfs_dir_snapshot()
+    build_func()
+    snap2 = lfs_dir_snapshot()
+    snap_f_path = os.environ["LFS"] + "/" + build_func.__name__ + "_new_files"
+    with open(snap_f_path, 'w') as f:
+        f.writelines(snap2 - snap1)
+
+build_w_snapshots(build_temp_ncurses)
+build_w_snapshots(build_temp_bash)
