@@ -1,5 +1,9 @@
 import os
-from utils import exec_commands_with_failure, try_make_build_dir, find_source_dir, exec_commands_with_failure_and_logging
+from utils import (
+    try_make_build_dir, 
+    find_source_dir, 
+    read_in_bash_script, 
+    exec_commands_with_failure_and_logging )
 
 def build_cross_binutils():
     src_dir_path = find_source_dir("binutils")
@@ -57,7 +61,7 @@ def build_cross_gcc():
     os.chdir(os.environ["LFS"] + "/srcs/")
     os.system("rm -rf gcc-build")
 
-def extract_linux_api_headers():
+def build_linux_api_headers():
     src_dir_path = find_source_dir("linux")
     os.chdir(src_dir_path)
     exec_commands_with_failure_and_logging(["make mrproper", "make headers",
@@ -104,4 +108,17 @@ def build_libstdcpp():
         os.system("rm -v {}/usr/lib/lib{}.la".format(os.environ["LFS"], fname))
 
 
+def vanilla_build(package_name):
+    def f():
+        src_dir_path = find_source_dir(package_name)
+        os.chdir(src_dir_path)
+        build_script_path = os.environ["HOME"] + "/build-scripts/temp-{}.sh".format(package_name)
+        commands = read_in_bash_script(build_script_path)
+        log_file_path = os.environ["LFS"] + "/build-logs/" + package_name
+        exec_commands_with_failure_and_logging(commands, log_file_path)
+    return f
 
+build_temp_m4 = vanilla_build("m4")
+build_temp_ncurses = vanilla_build("ncurses")
+build_temp_bash = vanilla_build("bash")
+build_temp_coreutils = vanilla_build("coreutils")
