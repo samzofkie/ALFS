@@ -21,6 +21,8 @@ def create_dir_structure():
             os.mkdir(directory)
     except FileExistsError:
         pass
+    for i in ["bin", "lib", "sbin"]:
+        os.system("ln -sv usr/{} {}/{}".format(i, os.environ["LFS"], i))
     print("directory structure is created in " + os.environ["LFS"])
 
 def red_print(s):
