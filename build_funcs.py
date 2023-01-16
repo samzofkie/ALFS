@@ -6,6 +6,8 @@ from utils import (
     vanilla_build)
 
 
+build_cross_binutils = vanilla_build("cross_binutils", "build") 
+
 def build_cross_gcc():
     src_dir_path = find_source_dir("gcc")
     os.chdir(src_dir_path)

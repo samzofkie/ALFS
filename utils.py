@@ -4,19 +4,14 @@ import re
 
 
 def try_make_build_dir(path):
-    try:
-        os.mkdir(path)
-    except FileExistsError:
+    if os.path.exists(path):
         os.system("rm -rf " + path)
-        os.mkdir(path)
-    os.chdir(path)
-
-#---------- vanilla build ----------
+    os.mkdir(path)
 
 def clean_target_name(target_name):
     for prefix in ["temp_", "cross_"]:
         if prefix in target_name:
-            target_name.replace(prefix, '')
+            target_name = target_name.replace(prefix, '')
     return target_name
 
 def find_source_dir(target_name):
@@ -62,10 +57,16 @@ def exec_commands_with_failure_and_logging(commands, log_file_path):
             os.system("echo '{} returned {}'".format(command, ret))
             sys.exit(1)
 
-def vanilla_build(target_name):
+def vanilla_build(target_name, build_dir=None):
     def f():
+        nonlocal build_dir
         src_dir_path = find_source_dir(target_name)
-        os.chdir(src_dir_path)
+        if build_dir == None:
+            build_dir = src_dir_path
+        else:
+            build_dir = src_dir_path + '/' + build_dir
+            try_make_build_dir(build_dir)
+        os.chdir(build_dir)
         build_script_path = \
                 os.environ["HOME"] + "/build-scripts/{}.sh".format(target_name.replace('_', '-'))
         commands = read_in_bash_script(build_script_path)

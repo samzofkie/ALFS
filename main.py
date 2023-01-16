@@ -91,7 +91,7 @@ class Target:
             print(self.name + " already built")
 
 targets = [
-    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld"),
+    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld", build_cross_binutils),
     Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc", build_cross_gcc),
     Target("linux api headers", "/usr/include/linux", build_linux_api_headers),
     Target("cross glibc", "/usr/lib/libc.so", build_glibc),
