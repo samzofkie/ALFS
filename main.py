@@ -29,7 +29,7 @@ def red_print(s):
     print("\33[31m" + s + "\33[0m")
 
 def read_tarball_urls():
-    os.chdir("/home/lfs")
+    os.chdir(os.environ["HOME"])
     with open("tarball_urls",'r') as f:
         urls = f.readlines()
     urls = [url.strip('\n') for url in urls]
@@ -91,7 +91,7 @@ class Target:
             print(self.name + " already built")
 
 targets = [
-    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld", build_cross_binutils),
+    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld"),
     Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc", build_cross_gcc),
     Target("linux api headers", "/usr/include/linux", build_linux_api_headers),
     Target("cross glibc", "/usr/lib/libc.so", build_glibc),
@@ -106,7 +106,7 @@ for target in targets:
     target.build()
 
 
-#------- helpers ----------
+#------- utils ----------
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
     snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
