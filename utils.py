@@ -2,13 +2,13 @@ import os
 import sys
 import re
 
-def build_if_file_missing(file, build_f):
+def build_if_file_missing(file, build_func):
     if not os.path.exists(file):
-        build_f()
+        build_func()
     else:
-        target_name = build_f.replace("build_",'')
-        target_name = build_f.replace('_', ' ')
-        print(target_name + " already built.")
+        target_name = build_func.__name__.replace("build_",'')
+        target_name = target_name.replace('_', ' ')
+        print(target_name + " already built")
 
 def exec_commands_with_failure_and_logging(commands, log_file_path):
     if os.path.isfile(log_file_path):
@@ -16,7 +16,7 @@ def exec_commands_with_failure_and_logging(commands, log_file_path):
     os.system("touch " + log_file_path)
     commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
     for command in commands:
-        os.system("echo 'executing {}...' | tee -a {}".format(command, log_file_path))
+        os.system("echo 'executing: {}' | tee -a {}".format(command, log_file_path))
         ret = os.system(command)
         if ret != 0:
             os.system("echo '{} returned {}'".format(command, ret))

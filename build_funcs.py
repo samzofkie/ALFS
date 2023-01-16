@@ -116,6 +116,7 @@ def vanilla_build(package_name):
         commands = read_in_bash_script(build_script_path)
         log_file_path = os.environ["LFS"] + "/build-logs/" + package_name
         exec_commands_with_failure_and_logging(commands, log_file_path)
+    f.__name__ = "build_" + package_name
     return f
 
 build_temp_m4 = vanilla_build("m4")
