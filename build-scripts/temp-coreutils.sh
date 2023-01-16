@@ -1,8 +1,8 @@
 ./configure --prefix=/usr \
---host=$LFS_TGT \
---build=$(build-aux/config.guess) \
---enable-install-program=hostname \ 
---enable-no-install-program=kill,uptime
+  --host=$LFS_TGT \
+  --build=$(build-aux/config.guess) \
+  --enable-install-program=hostname \ 
+  --enable-no-install-program=kill,uptime
 make 
 make DESTDIR=$LFS install
 
