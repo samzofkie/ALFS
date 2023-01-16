@@ -2,25 +2,6 @@ import os
 import sys
 import re
 
-def build_if_file_missing(file, build_func):
-    if not os.path.exists(file):
-        build_func()
-    else:
-        target_name = build_func.__name__.replace("build_",'')
-        target_name = target_name.replace('_', ' ')
-        print(target_name + " already built")
-
-def exec_commands_with_failure_and_logging(commands, log_file_path):
-    if os.path.isfile(log_file_path):
-        os.remove(log_file_path)
-    os.system("touch " + log_file_path)
-    commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
-    for command in commands:
-        os.system("echo 'executing: {}' | tee -a {}".format(command, log_file_path))
-        ret = os.system(command)
-        if ret != 0:
-            os.system("echo '{} returned {}'".format(command, ret))
-            sys.exit(1)
 
 def try_make_build_dir(path):
     try:
@@ -30,25 +11,28 @@ def try_make_build_dir(path):
         os.mkdir(path)
     os.chdir(path)
 
-def find_source_dir(package):
+#---------- vanilla build ----------
+
+def clean_target_name(target_name):
+    for prefix in ["temp_", "cross_"]:
+        if prefix in target_name:
+            target_name.replace(prefix, '')
+    return target_name
+
+def find_source_dir(target_name):
+    target_name = clean_target_name(target_name)
     lfs_src_path = os.environ["LFS"] + "/srcs/"
     os.chdir(lfs_src_path)
-    packages = os.listdir()
-    res = [p for p in packages if package in p]
+    res = [p for p in os.listdir() if target_name in p]
     res = [p for p in res if ".patch" not in p]
     if len(res) > 1:
-        print("ambiguous package name passed to find_source_dir: " + \
-                package)
+        print("ambiguous target name passed to find_source_dir: cleaned target name is " + \
+                target_name)
         sys.exit(1)
     elif len(res) == 0:
-        print("package name passed to find_source_dir ({}) turned up no results".format(package))
+        print("cleaned target name ({}) in find_source_dir turned up no results".format(target_name))
         sys.exit(1)
     return lfs_src_path + res[0]
-
-def lfs_dir_snapshot():
-    os.chdir(os.environ["LFS"])
-    snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
-    return set(snapshot)
 
 def read_in_bash_script(script_path):
     with open(script_path) as f:
@@ -65,4 +49,28 @@ def read_in_bash_script(script_path):
         else:
             i+=1
     return commands
+
+def exec_commands_with_failure_and_logging(commands, log_file_path):
+    if os.path.isfile(log_file_path):
+        os.remove(log_file_path)
+    os.system("touch " + log_file_path)
+    commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
+    for command in commands:
+        os.system("echo 'executing: {}' | tee -a {}".format(command, log_file_path))
+        ret = os.system(command)
+        if ret != 0:
+            os.system("echo '{} returned {}'".format(command, ret))
+            sys.exit(1)
+
+def vanilla_build(target_name):
+    def f():
+        src_dir_path = find_source_dir(target_name)
+        os.chdir(src_dir_path)
+        build_script_path = \
+                os.environ["HOME"] + "/build-scripts/{}.sh".format(target_name.replace('_', '-'))
+        commands = read_in_bash_script(build_script_path)
+        log_file_path = os.environ["LFS"] + "/build-logs/" + target_name
+        exec_commands_with_failure_and_logging(commands, log_file_path)
+    f.__name__ = "build_" + target_name
+    return f
 

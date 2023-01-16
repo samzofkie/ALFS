@@ -2,7 +2,6 @@ import os
 from utils import (
     try_make_build_dir, 
     find_source_dir, 
-    read_in_bash_script, 
     exec_commands_with_failure_and_logging )
 
 def build_cross_binutils():
@@ -107,19 +106,3 @@ def build_libstdcpp():
     for fname in ["stdc++", "stdc++fs", "supc++"]:
         os.system("rm -v {}/usr/lib/lib{}.la".format(os.environ["LFS"], fname))
 
-
-def vanilla_build(package_name):
-    def f():
-        src_dir_path = find_source_dir(package_name)
-        os.chdir(src_dir_path)
-        build_script_path = os.environ["HOME"] + "/build-scripts/temp-{}.sh".format(package_name)
-        commands = read_in_bash_script(build_script_path)
-        log_file_path = os.environ["LFS"] + "/build-logs/" + package_name
-        exec_commands_with_failure_and_logging(commands, log_file_path)
-    f.__name__ = "build_" + package_name
-    return f
-
-build_temp_m4 = vanilla_build("m4")
-build_temp_ncurses = vanilla_build("ncurses")
-build_temp_bash = vanilla_build("bash")
-build_temp_coreutils = vanilla_build("coreutils")

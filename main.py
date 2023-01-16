@@ -5,7 +5,7 @@ import urllib.request
 import sys
 
 from build_funcs import *
-from utils import build_if_file_missing
+from utils import vanilla_build
 
 
 lfs_dir_structure = [ "etc", "var", "usr", "tools",
@@ -19,10 +19,10 @@ def create_dir_structure():
         os.chdir(os.environ["LFS"])
         for directory in lfs_dir_structure:
             os.mkdir(directory)
+        for i in ["bin", "lib", "sbin"]:
+            os.system("ln -s usr/{} {}/{}".format(i, os.environ["LFS"], i))
     except FileExistsError:
         pass
-    for i in ["bin", "lib", "sbin"]:
-        os.system("ln -sv usr/{} {}/{}".format(i, os.environ["LFS"], i))
     print("directory structure is created in " + os.environ["LFS"])
 
 def red_print(s):
@@ -73,31 +73,44 @@ except KeyError:
 create_dir_structure()
 download_and_unpack_sources()
 
-cross_linker_filename = os.environ["LFS"] + "/tools/bin/" + \
-        os.environ["LFS_TGT"] + "-ld"
-build_if_file_missing(cross_linker_filename, build_cross_binutils,)
+LFS = os.environ["LFS"]
+LFS_TGT = os.environ["LFS_TGT"]
 
-cross_compiler_filename = os.environ["LFS"] + "/tools/bin/" + \
-        os.environ["LFS_TGT"] + "-gcc"
-build_if_file_missing(cross_compiler_filename, build_cross_gcc)
+class Target:
+    def __init__(self, name, binary, build_func=None):
+        self.name = name
+        self.binary = LFS + binary
+        self.build_func = build_func
+        if self.build_func == None:
+            self.build_func = vanilla_build(name.replace(' ', '_'))
 
-build_if_file_missing(os.environ["LFS"] + "/usr/include/linux", 
-                      build_linux_api_headers)
+    def build(self):
+        if not os.path.exists(self.binary):
+            self.build_func()
+        else:
+            print(self.name + " already built")
 
-build_if_file_missing(os.environ["LFS"] + "/usr/lib/libc.so",
-                      build_glibc)
+targets = [
+    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld", build_cross_binutils),
+    Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc", build_cross_gcc),
+    Target("linux api headers", "/usr/include/linux", build_linux_api_headers),
+    Target("cross glibc", "/usr/lib/libc.so", build_glibc),
+    Target("cross libstdcpp", "/usr/lib/libstdc++.so", build_libstdcpp),
 
-build_if_file_missing(os.environ["LFS"] + "/usr/lib/libstdc++.so",
-                      build_libstdcpp)
+    Target("temp m4", "/usr/bin/m4"),
+    Target("temp ncurses", "/usr/lib/libncurses.so"),
+    Target("temp bash", "/usr/bin/bash"),
+]
 
-build_if_file_missing(os.environ["LFS"] + "/usr/bin/m4", 
-                      build_temp_m4)
+for target in targets:
+    target.build()
 
-build_if_file_missing(os.environ["LFS"] + "/usr/lib/libncurses.so",
-                      build_temp_ncurses)
 
-build_if_file_missing(os.environ["LFS"] + "/usr/bin/bash",
-                      build_temp_bash)
+#------- helpers ----------
+def lfs_dir_snapshot():
+    os.chdir(os.environ["LFS"])
+    snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
+    return set(snapshot)
 
 def build_w_snapshots(build_func):
     snap1 = lfs_dir_snapshot()
