@@ -46,9 +46,8 @@ def read_in_bash_script(script_path):
     return commands
 
 def exec_commands_with_failure_and_logging(commands, log_file_path):
-    if os.path.isfile(log_file_path):
-        os.remove(log_file_path)
-    os.system("touch " + log_file_path)
+    if not os.path.isfile(log_file_path):
+        os.system("touch " + log_file_path)
     commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
     for command in commands:
         os.system("echo 'executing: {}' | tee -a {}".format(command, log_file_path))
