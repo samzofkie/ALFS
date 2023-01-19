@@ -4,9 +4,6 @@ import os
 import urllib.request
 import sys
 
-from build_funcs import *
-from utils import vanilla_build
-
 
 lfs_dir_structure = [ "etc", "var", "usr", "tools",
                       "lib64", "srcs",
@@ -75,6 +72,9 @@ download_and_unpack_sources()
 LFS = os.environ["LFS"]
 LFS_TGT = os.environ["LFS_TGT"]
 
+
+from utils import vanilla_build
+
 class Target:
     def __init__(self, name, binary, build_func=None):
         self.name = name
@@ -89,6 +89,9 @@ class Target:
         else:
             print(self.name + " already built")
 
+
+from build_funcs import *
+
 targets = [
     Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld"),
     Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc"),
@@ -100,15 +103,24 @@ targets = [
 
     Target("temp m4", "/usr/bin/m4"),
     Target("temp ncurses", "/usr/lib/libncurses.so"),
-    Target("temp bash", "/usr/bin/bash"),
+    Target("temp bash", "/usr/bin/bash")
 ]
 
 for target in targets:
     target.build()
-
+"""
 build_w_snapshots(vanilla_build("temp_coreutils"))
 build_w_snapshots(vanilla_build("temp_diffutils"))
-
+build_w_snapshots(vanilla_build("temp_file"))
+build_w_snapshots(vanilla_build("temp_findutils"))
+build_w_snapshots(vanilla_build("temp_gawk"))
+build_w_snapshots(vanilla_build("temp_grep"))
+build_w_snapshots(vanilla_build("temp_gzip"))
+build_w_snapshots(vanilla_build("temp_make"))
+build_w_snapshots(vanilla_build("temp_patch"))
+build_w_snapshots(vanilla_build("temp_sed"))
+build_w_snapshots(vanilla_build("temp_tar"))
+build_w_snapshots(vanilla_build("temp_xz"))"""
 
 #------- utils ----------
 def lfs_dir_snapshot():
