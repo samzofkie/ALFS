@@ -94,8 +94,8 @@ targets = [
     Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld", build_cross_binutils),
     Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc", build_cross_gcc),
     Target("linux api headers", "/usr/include/linux", build_linux_api_headers),
-    Target("cross glibc", "/usr/lib/libc.so", build_glibc),
-    Target("cross libstdcpp", "/usr/lib/libstdc++.so", build_libstdcpp),
+    Target("cross glibc", "/usr/lib/libc.so", build_cross_glibc),
+    Target("cross libstdcpp", "/usr/lib/libstdc++.so", build_cross_libstdcpp),
 
     Target("temp m4", "/usr/bin/m4"),
     Target("temp ncurses", "/usr/lib/libncurses.so"),

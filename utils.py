@@ -74,3 +74,7 @@ def vanilla_build(target_name, build_dir=None):
     f.__name__ = "build_" + target_name
     return f
 
+def get_version_num(target_name):
+    src_dir = get_source_dir(target_name).split('/')[-1]
+    return src_dir.split('-')[-1]
+

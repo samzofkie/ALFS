@@ -2,8 +2,10 @@ import os
 from utils import (
     try_make_build_dir, 
     find_source_dir, 
+    read_in_bash_script,
     exec_commands_with_failure_and_logging,
-    vanilla_build)
+    vanilla_build,
+    get_version_num)
 
 
 build_cross_binutils = vanilla_build("cross_binutils", "build")    
@@ -26,8 +28,7 @@ def build_cross_gcc():
     os.chdir(src_dir_path)
     os.system("cat gcc/limitx.h gcc/glimits.h gcc/limity.h > \
         `dirname $($LFS_TGT-gcc -print-libgcc-file-name)`/install-tools/include/limits.h")
-    os.chdir(os.environ["LFS"] + "/srcs/")
-    os.system("rm -rf gcc-build")
+    os.system("rm -rf {}/srcs/gcc-build".format(os.environ["LFS"])
 
 def build_linux_api_headers():
     src_dir_path = find_source_dir("linux")
@@ -37,7 +38,7 @@ def build_linux_api_headers():
             "cp -rv usr/include {}/usr".format(os.environ["LFS"])], 
                                            os.environ["LFS"] + "/build-logs/linux_api_headers")
 
-def build_glibc():
+"""def build_cross_glibc():
     src_dir_path = find_source_dir("glibc")
     os.chdir(src_dir_path)
     os.system("ln -sfv ../lib/ld-linux-x86-64.so.2 " + \
@@ -57,9 +58,20 @@ def build_glibc():
     exec_commands_with_failure_and_logging(build_commands, os.environ["LFS"] + "/glibc")
     os.system("sed '/RTLDLIST=/s@/usr@@g' -i $LFS/usr/bin/ldd".format(os.environ["LFS"]))
     os.system(os.environ["LFS"] + \
-            "/tools/libexec/gcc/{}/12.2.0/install-tools/mkheaders".format(os.environ["LFS_TGT"]))
+            "/tools/libexec/gcc/{}/12.2.0/install-tools/mkheaders".format(os.environ["LFS_TGT"]))"""
 
-def build_libstdcpp():
+def build_cross_glibc():
+    src_dir = find_source_dir("glibc")
+    glibc_version_n = get_version_num("glibc")
+    os.chdir(src_dir)
+    os.system("patch -Np1 -i ../glibc-{}-fhs-1.patch".format(glibc_version_n))
+    vanilla_build("cross_glibc", "build")()
+    gcc_version_n = get_version_num("gcc")
+    os.system(os.environ["LFS"] + \
+        "/tools/libexec/gcc/{}/{}/install-tools/mkheaders".format(os.environ["LFS_TGT"], gcc_version_n))
+   
+
+def build_cross_libstdcpp():
     src_dir_path = find_source_dir("gcc")
     try_make_build_dir(os.environ["LFS"] + "/srcs/gcc-build")
     build_commands = [ (src_dir_path + "/libstdc++-v3/configure "
