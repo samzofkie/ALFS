@@ -1,3 +1,4 @@
+set -e
 ./configure --prefix=/usr \
   --build=$(support/config.guess) \
   --host=$LFS_TGT \

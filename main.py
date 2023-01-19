@@ -95,18 +95,19 @@ targets = [
     Target("linux api headers", "/usr/include/linux", 
         vanilla_build("linux_api_headers", "linux")),
     Target("cross glibc", "/usr/lib/libc.so", build_cross_glibc),
-    #Target("cross libstdcpp", "/usr/lib/libstdc++.so", build_cross_libstdcpp),
+    Target("cross libstdcpp", "/usr/lib/libstdc++.so",
+        vanilla_build("cross_libstdcpp", "gcc")),
 
-    #Target("temp m4", "/usr/bin/m4"),
-    #Target("temp ncurses", "/usr/lib/libncurses.so"),
-    #Target("temp bash", "/usr/bin/bash"),
+    Target("temp m4", "/usr/bin/m4"),
+    Target("temp ncurses", "/usr/lib/libncurses.so"),
+    Target("temp bash", "/usr/bin/bash"),
 ]
 
 for target in targets:
     target.build()
 
-#build_w_snapshots(vanilla_build("temp_coreutils"))
-#build_w_snapshots(vanilla_build("temp_diffutils"))
+build_w_snapshots(vanilla_build("temp_coreutils"))
+build_w_snapshots(vanilla_build("temp_diffutils"))
 
 
 #------- utils ----------

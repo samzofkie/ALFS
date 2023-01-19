@@ -1,3 +1,5 @@
+set -e 
+
 sed -i s/mawk// configure
 
 mkdir build
