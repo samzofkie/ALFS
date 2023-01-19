@@ -29,52 +29,24 @@ def find_source_dir(target_name):
         sys.exit(1)
     return lfs_src_path + res[0]
 
-def read_in_bash_script(script_path):
-    with open(script_path) as f:
-        commands = [re.sub(r'\s*$', '', line) for line in f.readlines()]
-    commands = [c for c in commands if c != '']
-    i=0
-    while i<len(commands):
-        # If a line in a bash script ends in a '\',
-        # the next line should be tagged on to the current line
-        # and the '\' removed.
-        if commands[i][-1] == '\\':
-            commands[i] = commands[i][:-1] + commands[i+1]
-            del commands[i+1]
-        else:
-            i+=1
-    return commands
-
-def exec_commands_with_failure_and_logging(commands, log_file_path):
-    if not os.path.isfile(log_file_path):
-        os.system("touch " + log_file_path)
-    commands = [command + " 2>&1 | tee -a " + log_file_path for command in commands]
-    for command in commands:
-        os.system("echo 'executing: {}' | tee -a {}".format(command, log_file_path))
-        ret = os.system(command)
-        if ret != 0:
-            os.system("echo '{} returned {}'".format(command, ret))
-            sys.exit(1)
-
-def vanilla_build(target_name, build_dir=None):
+def vanilla_build(target_name, src_dir_name=None):
     def f():
-        nonlocal build_dir
-        src_dir_path = find_source_dir(target_name)
-        if build_dir == None:
-            build_dir = src_dir_path
-        else:
-            build_dir = src_dir_path + '/' + build_dir
-            try_make_build_dir(build_dir)
-        os.chdir(build_dir)
-        build_script_path = \
-                os.environ["HOME"] + "/build-scripts/{}.sh".format(target_name.replace('_', '-'))
-        commands = read_in_bash_script(build_script_path)
+        nonlocal src_dir_name
+        if src_dir_name == None:
+            src_dir_name = target_name
+        src_dir_path = find_source_dir(src_dir_name)
+        build_script_path = os.environ["HOME"] + \
+                "/build-scripts/{}.sh".format(target_name.replace('_','-'))
         log_file_path = os.environ["LFS"] + "/build-logs/" + target_name
-        exec_commands_with_failure_and_logging(commands, log_file_path)
+        os.chdir(src_dir_path)
+        ret = os.system("bash " + build_script_path + " 2>&1 | tee -a " + log_file_path)
+        if ret != 0:
+            print(target_name.replace("_","-") + ".sh failed")
+            sys.exit(1)
     f.__name__ = "build_" + target_name
     return f
 
 def get_version_num(target_name):
-    src_dir = get_source_dir(target_name).split('/')[-1]
+    src_dir = find_source_dir(target_name).split('/')[-1]
     return src_dir.split('-')[-1]
 
