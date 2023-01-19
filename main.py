@@ -94,7 +94,7 @@ targets = [
     Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc"),
     Target("linux api headers", "/usr/include/linux", 
         vanilla_build("linux_api_headers", "linux")),
-    #Target("cross glibc", "/usr/lib/libc.so", build_cross_glibc),
+    Target("cross glibc", "/usr/lib/libc.so", build_cross_glibc),
     #Target("cross libstdcpp", "/usr/lib/libstdc++.so", build_cross_libstdcpp),
 
     #Target("temp m4", "/usr/bin/m4"),
