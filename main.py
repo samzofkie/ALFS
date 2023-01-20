@@ -11,8 +11,8 @@ lfs_dir_structure = [ "etc", "var", "usr", "tools",
                       "build-logs" ]
 
 def create_dir_structure():
-    try: 
-        os.mkdir(os.environ["LFS"])
+    try:
+        os.mkdir(os.environ["LFS"]) 
         os.chdir(os.environ["LFS"])
         for directory in lfs_dir_structure:
             os.mkdir(directory)
@@ -119,6 +119,10 @@ targets = [
 for target in targets:
     target.build()
 
+build_w_snapshots(vanilla_build("temp_binutils"))
+build_w_snapshots(vanilla_build("temp_gcc"))
+
+
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
     snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
@@ -131,4 +135,3 @@ def build_w_snapshots(build_func):
     snap_f_path = os.environ["LFS"] + "/" + build_func.__name__ + "_new_files"
     with open(snap_f_path, 'w') as f:
         f.write('\n'.join(snap2 - snap1))
-

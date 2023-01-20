@@ -1,7 +1,7 @@
 set +h
 umask 022
 alias ls="ls --color"
-LFS=/home/lfs/lfs
+LFS=/root/lfs
 LC_ALL=POSIX
 LFS_TGT=$(uname -m)-lfs-linux-gnu
 PATH=/usr/bin
