@@ -72,7 +72,6 @@ download_and_unpack_sources()
 LFS = os.environ["LFS"]
 LFS_TGT = os.environ["LFS_TGT"]
 
-
 from utils import vanilla_build
 
 class Target:
@@ -89,40 +88,37 @@ class Target:
         else:
             print(self.name + " already built")
 
-
 from build_funcs import *
 
 targets = [
-    Target("cross binutils", "/tools/bin/" + LFS_TGT + "-ld"),
-    Target("cross gcc", "/tools/bin/" + LFS_TGT +"-gcc"),
+    Target("cross binutils",    "/tools/bin/" + LFS_TGT + "-ld"),
+    Target("cross gcc",         "/tools/bin/" + LFS_TGT +"-gcc"),
     Target("linux api headers", "/usr/include/linux", 
-        vanilla_build("linux_api_headers", "linux")),
-    Target("cross glibc", "/usr/lib/libc.so", build_cross_glibc),
-    Target("cross libstdcpp", "/usr/lib/libstdc++.so",
-        vanilla_build("cross_libstdcpp", "gcc")),
+                                vanilla_build("linux_api_headers", "linux")),
+    Target("cross glibc",       "/usr/lib/libc.so", build_cross_glibc),
+    Target("cross libstdcpp",   "/usr/lib/libstdc++.so",
+                                vanilla_build("cross_libstdcpp", "gcc")),
 
-    Target("temp m4", "/usr/bin/m4"),
-    Target("temp ncurses", "/usr/lib/libncurses.so"),
-    Target("temp bash", "/usr/bin/bash")
+    Target("temp m4",           "/usr/bin/m4"),
+    Target("temp ncurses",      "/usr/lib/libncurses.so"),
+    Target("temp bash",         "/usr/bin/bash"),
+    Target("temp coreutils",    "/usr/bin/ls"),
+    Target("temp diffutils",    "/usr/bin/diff"),
+    Target("temp file",         "/usr/bin/file"),
+    Target("temp findutils",    "/usr/bin/find"),
+    Target("temp gawk",         "/usr/bin/gawk"),
+    Target("temp grep",         "/usr/bin/grep"),
+    Target("temp gzip",         "/usr/bin/gzip"),
+    Target("temp make",         "/usr/bin/make"),
+    Target("temp patch",        "/usr/bin/patch"),
+    Target("temp sed",          "/usr/bin/sed"),
+    Target("temp tar",          "/usr/bin/tar"),
+    Target("temp xz",           "/usr/bin/xz")
 ]
 
 for target in targets:
     target.build()
-"""
-build_w_snapshots(vanilla_build("temp_coreutils"))
-build_w_snapshots(vanilla_build("temp_diffutils"))
-build_w_snapshots(vanilla_build("temp_file"))
-build_w_snapshots(vanilla_build("temp_findutils"))
-build_w_snapshots(vanilla_build("temp_gawk"))
-build_w_snapshots(vanilla_build("temp_grep"))
-build_w_snapshots(vanilla_build("temp_gzip"))
-build_w_snapshots(vanilla_build("temp_make"))
-build_w_snapshots(vanilla_build("temp_patch"))
-build_w_snapshots(vanilla_build("temp_sed"))
-build_w_snapshots(vanilla_build("temp_tar"))
-build_w_snapshots(vanilla_build("temp_xz"))"""
 
-#------- utils ----------
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
     snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
