@@ -5,12 +5,11 @@ import urllib.request
 import sys
 
 
-lfs_dir_structure = [ "etc", "var", "usr", "tools",
-                      "lib64", "srcs",
-                      "usr/bin", "usr/lib", "usr/sbin",
-                      "build-logs" ]
-
 def create_dir_structure():
+    lfs_dir_structure = [ "etc", "var", "usr", "tools",
+                          "lib64", "srcs", "build-logs",
+                          "usr/bin", "usr/lib", "usr/sbin",
+                          "dev", "proc", "sys", "run" ]
     try:
         os.mkdir(os.environ["LFS"]) 
         os.chdir(os.environ["LFS"])
@@ -58,20 +57,6 @@ def download_and_unpack_sources():
         if "tzdata2022c" in dest:
             os.chdir(os.environ["LFS"] + "/srcs")
 
-#-------- main ----------
-try:
-    for var in ["LFS", "LFS_TGT"]:
-        os.environ[var]
-except KeyError:
-    print("{} env var not set. bye!".format(var))
-    sys.exit(1)
-
-create_dir_structure()
-download_and_unpack_sources()
-
-LFS = os.environ["LFS"]
-LFS_TGT = os.environ["LFS_TGT"]
-
 from utils import vanilla_build
 
 class Target:
@@ -90,39 +75,6 @@ class Target:
 
 from build_funcs import *
 
-targets = [
-    Target("cross binutils",    "/tools/bin/" + LFS_TGT + "-ld"),
-    Target("cross gcc",         "/tools/bin/" + LFS_TGT +"-gcc"),
-    Target("linux api headers", "/usr/include/linux", 
-                                vanilla_build("linux_api_headers", "linux")),
-    Target("cross glibc",       "/usr/lib/libc.so", build_cross_glibc),
-    Target("cross libstdcpp",   "/usr/lib/libstdc++.so",
-                                vanilla_build("cross_libstdcpp", "gcc")),
-
-    Target("temp m4",           "/usr/bin/m4"),
-    Target("temp ncurses",      "/usr/lib/libncurses.so"),
-    Target("temp bash",         "/usr/bin/bash"),
-    Target("temp coreutils",    "/usr/bin/ls"),
-    Target("temp diffutils",    "/usr/bin/diff"),
-    Target("temp file",         "/usr/bin/file"),
-    Target("temp findutils",    "/usr/bin/find"),
-    Target("temp gawk",         "/usr/bin/gawk"),
-    Target("temp grep",         "/usr/bin/grep"),
-    Target("temp gzip",         "/usr/bin/gzip"),
-    Target("temp make",         "/usr/bin/make"),
-    Target("temp patch",        "/usr/bin/patch"),
-    Target("temp sed",          "/usr/bin/sed"),
-    Target("temp tar",          "/usr/bin/tar"),
-    Target("temp xz",           "/usr/bin/xz")
-]
-
-for target in targets:
-    target.build()
-
-build_w_snapshots(vanilla_build("temp_binutils"))
-build_w_snapshots(vanilla_build("temp_gcc"))
-
-
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
     snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
@@ -135,3 +87,65 @@ def build_w_snapshots(build_func):
     snap_f_path = os.environ["LFS"] + "/" + build_func.__name__ + "_new_files"
     with open(snap_f_path, 'w') as f:
         f.write('\n'.join(snap2 - snap1))
+
+def mount_vkfs():
+    mount_commands = [ "mount -v --bind /dev {}/dev",
+                       "mount -v --bind /dev/pts {}/dev/pts",
+                       "mount -vt proc proc {}/proc",
+                       "mount -vt sysfs sysfs {}/sys",
+                       "mount -vt tmpfs tmpfs {}/run" ]
+    for comm in mount_commands:
+        ret = os.system(comm.format(LFS))
+        if ret != 0:
+            print(comm.format(LFS) + " failed!")
+            sys.exit(1)
+
+#-------- main ----------
+if __name__ == "__main__":
+    try:
+        for var in ["LFS", "LFS_TGT"]:
+            os.environ[var]
+    except KeyError:
+        print("{} env var not set. bye!".format(var))
+        sys.exit(1)
+
+    create_dir_structure()
+    download_and_unpack_sources()
+
+    LFS = os.environ["LFS"]
+    LFS_TGT = os.environ["LFS_TGT"]
+
+    targets = [
+        Target("cross binutils",    "/tools/bin/" + LFS_TGT + "-ld"),
+        Target("cross gcc",         "/tools/bin/" + LFS_TGT +"-gcc"),
+        Target("linux api headers", "/usr/include/linux", 
+                                    vanilla_build("linux_api_headers", "linux")),
+        Target("cross glibc",       "/usr/lib/libc.so", build_cross_glibc),
+        Target("cross libstdcpp",   "/usr/lib/libstdc++.so",
+                                    vanilla_build("cross_libstdcpp", "gcc")),
+
+        Target("temp m4",           "/usr/bin/m4"),
+        Target("temp ncurses",      "/usr/lib/libncurses.so"),
+        Target("temp bash",         "/usr/bin/bash"),
+        Target("temp coreutils",    "/usr/bin/ls"),
+        Target("temp diffutils",    "/usr/bin/diff"),
+        Target("temp file",         "/usr/bin/file"),
+        Target("temp findutils",    "/usr/bin/find"),
+        Target("temp gawk",         "/usr/bin/gawk"),
+        Target("temp grep",         "/usr/bin/grep"),
+        Target("temp gzip",         "/usr/bin/gzip"),
+        Target("temp make",         "/usr/bin/make"),
+        Target("temp patch",        "/usr/bin/patch"),
+        Target("temp sed",          "/usr/bin/sed"),
+        Target("temp tar",          "/usr/bin/tar"),
+        Target("temp xz",           "/usr/bin/xz")
+    ]
+
+    for target in targets:
+        target.build()
+
+    build_w_snapshots(vanilla_build("temp_binutils"))
+    build_w_snapshots(vanilla_build("temp_gcc"))
+ 
+    mount_vkfs()
+
