@@ -138,14 +138,15 @@ if __name__ == "__main__":
         Target("temp patch",        "/usr/bin/patch"),
         Target("temp sed",          "/usr/bin/sed"),
         Target("temp tar",          "/usr/bin/tar"),
-        Target("temp xz",           "/usr/bin/xz")
+        Target("temp xz",           "/usr/bin/xz"),
+        #Target("temp binutils",     ""),
+        Target("temp gcc",          "/usr/bin/gcc")
     ]
 
     for target in targets:
         target.build()
 
     build_w_snapshots(vanilla_build("temp_binutils"))
-    build_w_snapshots(vanilla_build("temp_gcc"))
  
     mount_vkfs()
 

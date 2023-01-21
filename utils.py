@@ -1,7 +1,7 @@
 import os
 import sys
 import re
-
+import subprocess
 
 def try_make_build_dir(path):
     if os.path.exists(path):
@@ -38,11 +38,22 @@ def vanilla_build(target_name, src_dir_name=None):
         build_script_path = os.environ["HOME"] + \
                 "/build-scripts/{}.sh".format(target_name.replace('_','-'))
         log_file_path = os.environ["LFS"] + "/build-logs/" + target_name
-        os.chdir(src_dir_path)
-        ret = os.system("bash " + build_script_path + " 2>&1 | tee -a " + log_file_path)
+        os.chdir(src_dir_path) 
+        
+        with subprocess.Popen(build_script_path, shell=True,
+                              stdout=subprocess.PIPE, text=True 
+                              stderr=subprocess.STDOUT) as p:
+            output = p.stdout.read()
+            p.wait()
+            ret = p.returncode
+        
+        with open(log_file_path, 'a') as f:
+            f.writelines(output)
+
         if ret != 0:
-            print(target_name.replace("_","-") + ".sh failed")
+            print(build_script_path + " failed")
             sys.exit(1)
+    
     f.__name__ = "build_" + target_name
     return f
 
