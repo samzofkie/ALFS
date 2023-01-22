@@ -9,20 +9,19 @@ from utils import vanilla_build, red_print
 from build_funcs import *
 
 def create_dir_structure():
-    lfs_dir_structure = [ "etc", "var", "usr", "tools",
-                          "lib64", "srcs", "build-logs", 
-                          "build-logs/tracked-files",
-                          "usr/bin", "usr/lib", "usr/sbin",
-                          "dev", "proc", "sys", "run" ]
-    try:
-        os.mkdir(os.environ["LFS"]) 
-        os.chdir(os.environ["LFS"])
-        for directory in lfs_dir_structure:
-            os.mkdir(directory)
-        for i in ["bin", "lib", "sbin"]:
-            os.system("ln -s usr/{} {}/{}".format(i, os.environ["LFS"], i))
-    except FileExistsError:
-        pass
+    lfs_dir_structure = [ "/etc", "/var", "/usr", "/tools",
+                          "/lib64", "/srcs", "/build-logs", 
+                          "/build-logs/tracked-files",
+                          "/usr/bin", "/usr/lib", "/usr/sbin",
+                          "/dev", "/proc", "/sys", "/run" ]
+    if not os.path.exists(os.environ["LFS"]):
+        os.mkdir(os.environ["LFS"])
+    os.chdir(os.environ["LFS"])
+    for directory in lfs_dir_structure:
+        if not os.path.exists(os.environ["LFS"] + directory):
+            os.mkdir(os.environ["LFS"] + directory)
+    for i in ["bin", "lib", "sbin"]:
+        os.system("ln -s usr/{} {}/{}".format(i, os.environ["LFS"], i))
     print("directory structure is created in " + os.environ["LFS"])
 
 def read_tarball_urls():
