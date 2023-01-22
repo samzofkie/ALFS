@@ -5,9 +5,13 @@ import urllib.request
 import sys
 
 
+from utils import vanilla_build, red_print
+from build_funcs import *
+
 def create_dir_structure():
     lfs_dir_structure = [ "etc", "var", "usr", "tools",
-                          "lib64", "srcs", "build-logs",
+                          "lib64", "srcs", "build-logs", 
+                          "build-logs/tracked-files",
                           "usr/bin", "usr/lib", "usr/sbin",
                           "dev", "proc", "sys", "run" ]
     try:
@@ -20,9 +24,6 @@ def create_dir_structure():
     except FileExistsError:
         pass
     print("directory structure is created in " + os.environ["LFS"])
-
-def red_print(s):
-    print("\33[31m" + s + "\33[0m")
 
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
@@ -57,8 +58,6 @@ def download_and_unpack_sources():
         if "tzdata2022c" in dest:
             os.chdir(os.environ["LFS"] + "/srcs")
 
-from utils import vanilla_build
-
 class Target:
     def __init__(self, name, binary, build_func=None):
         self.name = name
@@ -73,21 +72,6 @@ class Target:
         else:
             print(self.name + " already built")
 
-from build_funcs import *
-
-def lfs_dir_snapshot():
-    os.chdir(os.environ["LFS"])
-    snapshot = os.popen("find -path './srcs' -prune -o -print").read().split('\n')
-    return set(snapshot)
-
-def build_w_snapshots(build_func):
-    snap1 = lfs_dir_snapshot()
-    build_func()
-    snap2 = lfs_dir_snapshot()
-    snap_f_path = os.environ["LFS"] + "/" + build_func.__name__ + "_new_files"
-    with open(snap_f_path, 'w') as f:
-        f.write('\n'.join(snap2 - snap1))
-
 def mount_vkfs():
     mount_commands = [ "mount -v --bind /dev {}/dev",
                        "mount -v --bind /dev/pts {}/dev/pts",
@@ -100,7 +84,6 @@ def mount_vkfs():
             print(comm.format(LFS) + " failed!")
             sys.exit(1)
 
-#-------- main ----------
 if __name__ == "__main__":
     try:
         for var in ["LFS", "LFS_TGT"]:
