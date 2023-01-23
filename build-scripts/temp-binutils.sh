@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 sed '6009s/$add_dir//' -i ltmain.sh
 mkdir -v build

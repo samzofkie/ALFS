@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 mkdir -v build
 pushd build

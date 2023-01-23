@@ -5,7 +5,7 @@ import urllib.request
 import sys
 
 
-from utils import vanilla_build, red_print
+from utils import vanilla_build, red_print, build_w_snapshots
 from build_funcs import *
 
 def create_dir_structure():
@@ -81,7 +81,7 @@ def mount_vkfs():
         ret = os.system(comm.format(LFS))
         if ret != 0:
             print(comm.format(LFS) + " failed!")
-            sys.exit(1)
+            #sys.exit(1)
 
 if __name__ == "__main__":
     try:

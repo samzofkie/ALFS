@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e 
 
 sed -i s/mawk// configure

@@ -69,7 +69,7 @@ def vanilla_build(target_name, src_dir_name=None):
 
         new_files = lfs_dir_snapshot() - snap1
         with open(tracked_file_record_path, 'w') as f:
-            f.writelines(new_files)
+            f.writelines('\n'.join(new_files))
     
     f.__name__ = "build_" + target_name
     return f
