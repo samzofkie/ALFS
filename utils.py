@@ -21,7 +21,7 @@ def find_source_dir(target_name):
     target_name = clean_target_name(target_name)
     lfs_src_path = os.environ["LFS"] + "/srcs/"
     os.chdir(lfs_src_path)
-    res = [p for p in os.listdir() if target_name in p]
+    res = [p for p in os.listdir() if target_name == p[:len(target_name)]]
     res = [p for p in res if ".patch" not in p]
     if len(res) > 1:
         print("ambiguous target name passed to find_source_dir: cleaned target name is " + \
