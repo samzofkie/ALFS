@@ -20,8 +20,10 @@ def create_dir_structure():
     for directory in lfs_dir_structure:
         if not os.path.exists(os.environ["LFS"] + directory):
             os.mkdir(os.environ["LFS"] + directory)
-    for i in ["bin", "lib", "sbin"]:
-        os.system("ln -s usr/{} {}/{}".format(i, os.environ["LFS"], i))
+    for directory in ["/bin", "/lib", "/sbin"]:
+        if not os.path.exists(os.environ["LFS"] + directory):
+            os.system("ln -s {}/usr{} {}{}".format(os.environ["LFS"], directory, 
+                                                     os.environ["LFS"], directory))
     print("directory structure is created in " + os.environ["LFS"])
 
 def read_tarball_urls():
@@ -121,18 +123,14 @@ if __name__ == "__main__":
         Target("temp sed",          "/usr/bin/sed"),
         Target("temp tar",          "/usr/bin/tar"),
         Target("temp xz",           "/usr/bin/xz"),
-        #Target("temp binutils",     ""),
+        Target("temp binutils",     "/usr/bin/ld"),
         Target("temp gcc",          "/usr/bin/gcc")
     ]
 
     for target in pre_chroot_targets:
         target.build()
 
-    build_w_snapshots(vanilla_build("temp_binutils"))
- 
-    #mount_vkfs()
-
-    os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
+    """os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
                                                         os.environ["HOME"]))
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
@@ -143,6 +141,6 @@ if __name__ == "__main__":
     
     chroot_targets = [
         #Target("chroot gettext", )
-    ]
+    ]"""
 
 
