@@ -4,9 +4,16 @@ import os
 import urllib.request
 import sys
 
-
 from utils import vanilla_build, red_print, build_w_snapshots
-from build_funcs import *
+
+def check_env_vars():
+    try:
+        for var in ["LFS", "LFS_TGT", "HOME"]:
+            os.environ[var]
+    except KeyError:
+        print(f"{var} env var not set. bye!")
+        sys.exit(1)
+    print("crucial environment variables are set...")
 
 def create_dir_structure():
     lfs_dir_structure = [ "/etc", "/var", "/usr", "/tools",
@@ -24,7 +31,7 @@ def create_dir_structure():
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s {}/usr{} {}{}".format(os.environ["LFS"], directory, 
                                                      os.environ["LFS"], directory))
-    print("directory structure is created in " + os.environ["LFS"])
+    print("directory structure is created in " + os.environ["LFS"] + "...")
 
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
@@ -36,101 +43,84 @@ def read_tarball_urls():
 def download_and_unpack_sources():
     urls = read_tarball_urls()
     os.chdir(os.environ["LFS"] + "/srcs")
+    missing = []
     for url in urls:
         package_name = url.split("/")[-1]
         dest = os.environ["LFS"] + "/srcs/" + package_name
         package_name = package_name.split(".tar")[0]
         if package_name in os.listdir():
             continue
-        print("downloading {}...".format(package_name))
+        #print("downloading {}...".format(package_name))
         try:
             urllib.request.urlretrieve(url, dest)
         except:
-            red_print("  failed to download {}!".format(package_name))
+            red_print("failed to download {}!".format(package_name))
+            missing.append(package_name)
             continue
         if ".tar" not in dest:
             continue
         if "tzdata2022c" in dest:
             os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
             os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
-        print("unpacking " + package_name + "...")
+        #print("unpacking " + package_name + "...")
         os.system("tar -xvf " + dest + " > /dev/null")
         os.system("rm " + dest)
         if "tzdata2022c" in dest:
             os.chdir(os.environ["LFS"] + "/srcs")
+    if missing == []:
+        print("sources are all downloaded and unpacked...")
+    else:
+        red_print("missing " + ' '.join(missing) + '!')
 
 class Target:
-    def __init__(self, name, binary, build_func=None):
+    def __init__(self, name, binary, alt_src_dir_name=None):
         self.name = name
-        self.binary = LFS + binary
-        self.build_func = build_func
-        if self.build_func == None:
-            self.build_func = vanilla_build(name.replace(' ', '_'))
-
+        self.binary = os.environ["LFS"] + binary
+        self.build_func = vanilla_build(name, alt_src_dir_name)
+        
     def build(self):
+        name = self.name.replace('_',' ')
         if not os.path.exists(self.binary):
+            print(f"building {name}...")
             self.build_func()
         else:
-            print(self.name + " already built")
+            print(f"{name} already built...")
 
-def mount_vkfs():
-    mount_commands = [ "mount -v --bind /dev {}/dev",
-                       "mount -v --bind /dev/pts {}/dev/pts",
-                       "mount -vt proc proc {}/proc",
-                       "mount -vt sysfs sysfs {}/sys",
-                       "mount -vt tmpfs tmpfs {}/run" ]
-    for comm in mount_commands:
-        ret = os.system(comm.format(LFS))
-        if ret != 0:
-            print(comm.format(LFS) + " failed!")
-            #sys.exit(1)
 
 if __name__ == "__main__":
-    try:
-        for var in ["LFS", "LFS_TGT"]:
-            os.environ[var]
-    except KeyError:
-        print("{} env var not set. bye!".format(var))
-        sys.exit(1)
-
+   
+    check_env_vars()
     create_dir_structure()
     download_and_unpack_sources()
+ 
+    for target in [
+        Target("cross_binutils",    f"/tools/bin/{os.environ['LFS_TGT']}-ld"),
+        Target("cross_gcc",         f"/tools/bin/{os.environ['LFS_TGT']}-gcc"),
+        Target("linux_api_headers", "/usr/include/linux", "linux"),
+        Target("cross_glibc",       "/usr/lib/libc.so"),
+        Target("cross_libstdcpp",   "/usr/lib/libstdc++.so", "gcc"),
 
-    LFS = os.environ["LFS"]
-    LFS_TGT = os.environ["LFS_TGT"]
-
-    pre_chroot_targets = [
-        Target("cross binutils",    "/tools/bin/" + LFS_TGT + "-ld"),
-        Target("cross gcc",         "/tools/bin/" + LFS_TGT +"-gcc"),
-        Target("linux api headers", "/usr/include/linux", 
-                                    vanilla_build("linux_api_headers", "linux")),
-        Target("cross glibc",       "/usr/lib/libc.so", build_cross_glibc),
-        Target("cross libstdcpp",   "/usr/lib/libstdc++.so",
-                                    vanilla_build("cross_libstdcpp", "gcc")),
-
-        Target("temp m4",           "/usr/bin/m4"),
-        Target("temp ncurses",      "/usr/lib/libncurses.so"),
-        Target("temp bash",         "/usr/bin/bash"),
-        Target("temp coreutils",    "/usr/bin/ls"),
-        Target("temp diffutils",    "/usr/bin/diff"),
-        Target("temp file",         "/usr/bin/file"),
-        Target("temp findutils",    "/usr/bin/find"),
-        Target("temp gawk",         "/usr/bin/gawk"),
-        Target("temp grep",         "/usr/bin/grep"),
-        Target("temp gzip",         "/usr/bin/gzip"),
-        Target("temp make",         "/usr/bin/make"),
-        Target("temp patch",        "/usr/bin/patch"),
-        Target("temp sed",          "/usr/bin/sed"),
-        Target("temp tar",          "/usr/bin/tar"),
-        Target("temp xz",           "/usr/bin/xz"),
-        Target("temp binutils",     "/usr/bin/ld"),
-        Target("temp gcc",          "/usr/bin/gcc")
-    ]
-
-    for target in pre_chroot_targets:
+        Target("temp_m4",           "/usr/bin/m4"),
+        Target("temp_ncurses",      "/usr/lib/libncurses.so"),
+        Target("temp_bash",         "/usr/bin/bash"),
+        Target("temp_coreutils",    "/usr/bin/ls"),
+        Target("temp_diffutils",    "/usr/bin/diff"),
+        Target("temp_file",         "/usr/bin/file"),
+        Target("temp_findutils",    "/usr/bin/find"),
+        Target("temp_gawk",         "/usr/bin/gawk"),
+        Target("temp_grep",         "/usr/bin/grep"),
+        Target("temp_gzip",         "/usr/bin/gzip"),
+        Target("temp_make",         "/usr/bin/make"),
+        Target("temp_patch",        "/usr/bin/patch"),
+        Target("temp_sed",          "/usr/bin/sed"),
+        Target("temp_tar",          "/usr/bin/tar"),
+        Target("temp_xz",           "/usr/bin/xz"),
+        Target("temp_binutils",     "/usr/bin/ld"),
+        Target("temp_gcc",          "/usr/bin/gcc")
+    ]:
         target.build()
-
-    """os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
+ 
+    os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
                                                         os.environ["HOME"]))
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
@@ -138,9 +128,18 @@ if __name__ == "__main__":
                   "TERM" : os.environ["TERM"],
                   "PATH" : "/usr/bin:/usr/sbin",
                   "LFS" : ''}
-    
-    chroot_targets = [
-        #Target("chroot gettext", )
-    ]"""
+   
+    for target in ["chroot_gettext", "chroot_bison", "chroot_perl",
+                   "chroot_python", "chroot_texinfo", "chroot_util-linux"]:
+        build_w_snapshots(vanilla_build(target))
 
+    """for target in [
+        Target("chroot_gettext",    ""),
+        Target("chroot_bison",      ""),
+        Target("chroot_perl",       ""),
+        Target("chroot_python",     ""),
+        Target("chroot_texinfo",    ""),
+        Target("chroot_util-linux", "")
+    ]:
+        target.build()"""
 

@@ -7,3 +7,5 @@ produce code for (target). When you configure GCC, you specify these with ‘--b
 --[GCC Internals 6.1](https://gcc.gnu.org/onlinedocs/gccint.pdf)
 
 Also, this [shell scripting best practices guide](https://sharats.me/posts/shell-script-best-practices/) is dope.
+
+Started using f-strings, so this is dependent on <= Python 3.6.

@@ -12,7 +12,7 @@ def try_make_build_dir(path):
     os.mkdir(path)
 
 def clean_target_name(target_name):
-    for prefix in ["temp_", "cross_"]:
+    for prefix in ["temp_", "cross_", "chroot_"]:
         if prefix in target_name:
             target_name = target_name.replace(prefix, '')
     return target_name
@@ -34,24 +34,29 @@ def find_source_dir(target_name):
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
-    snapshot = os.popen("find $LFS -type f").read().split('\n')
+    snapshot = os.popen(f"find {os.environ['LFS']} -type f").read().split('\n')
     return set(snapshot)
 
 def vanilla_build(target_name, src_dir_name=None):
     def f():
+        
         nonlocal src_dir_name
         if src_dir_name == None:
             src_dir_name = target_name
         src_dir_path = find_source_dir(src_dir_name)
+        
         build_script_path = os.environ["HOME"] + \
                 "/build-scripts/{}.sh".format(target_name.replace('_','-'))
+        
         log_file_path = os.environ["LFS"] + "/build-logs/" + target_name
+        
         tracked_file_record_path = os.environ["LFS"] + \
                 "/build-logs/tracked-files/" + target_name
+        
         snap1 = lfs_dir_snapshot()
 
         os.chdir(src_dir_path) 
-        print("building " + target_name.replace('_',' '))
+        
         with subprocess.Popen(build_script_path, shell=True,
                               stdout=subprocess.PIPE, text=True, 
                               stderr=subprocess.STDOUT) as p:
@@ -64,10 +69,10 @@ def vanilla_build(target_name, src_dir_name=None):
 
         if ret != 0:
             red_print(build_script_path + " failed")
-            #sys.exit(1)
             return
 
         new_files = lfs_dir_snapshot() - snap1
+        
         with open(tracked_file_record_path, 'w') as f:
             f.writelines('\n'.join(new_files))
     
