@@ -97,7 +97,7 @@ if __name__ == "__main__":
     LFS = os.environ["LFS"]
     LFS_TGT = os.environ["LFS_TGT"]
 
-    targets = [
+    pre_chroot_targets = [
         Target("cross binutils",    "/tools/bin/" + LFS_TGT + "-ld"),
         Target("cross gcc",         "/tools/bin/" + LFS_TGT +"-gcc"),
         Target("linux api headers", "/usr/include/linux", 
@@ -125,10 +125,24 @@ if __name__ == "__main__":
         Target("temp gcc",          "/usr/bin/gcc")
     ]
 
-    for target in targets:
+    for target in pre_chroot_targets:
         target.build()
 
     build_w_snapshots(vanilla_build("temp_binutils"))
  
-    mount_vkfs()
+    #mount_vkfs()
+
+    os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
+                                                        os.environ["HOME"]))
+    os.chdir(os.environ["LFS"])
+    os.chroot(os.environ["LFS"])
+    os.environ = {"HOME" : "/root",
+                  "TERM" : os.environ["TERM"],
+                  "PATH" : "/usr/bin:/usr/sbin",
+                  "LFS" : ''}
+    
+    chroot_targets = [
+        #Target("chroot gettext", )
+    ]
+
 

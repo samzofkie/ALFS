@@ -78,7 +78,6 @@ def get_version_num(target_name):
     src_dir = find_source_dir(target_name).split('/')[-1]
     return src_dir.split('-')[-1]
 
-
 def build_w_snapshots(build_func):
     snap1 = lfs_dir_snapshot()
     build_func()
