@@ -37,7 +37,7 @@ def lfs_dir_snapshot():
     res = subprocess.run(f"find {os.environ['LFS']} -type f", 
                               shell=True, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
-    return set(str(res.stdout).split('\n'))
+    return set(str(res.stdout).split('\\n'))
 
 def vanilla_build(target_name, src_dir_name=None):
     def f():
@@ -86,8 +86,8 @@ def get_version_num(target_name):
     return src_dir.split('-')[-1]
 
 def build_w_snapshots(build_func):
+    print(f"building {clean_target_name(build_func.__name__).replace('_',' ')} with snapshots...") 
     snap1 = lfs_dir_snapshot()
-    print(f"building {clean_target_name(build_func.__name__).replace('_',' ')} with snapshots...")
     build_func()
     snap2 = lfs_dir_snapshot()
     snap_f_path = os.environ["LFS"] + build_func.__name__ + "_new_files"
