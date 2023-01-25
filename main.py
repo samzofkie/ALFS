@@ -16,11 +16,11 @@ def check_env_vars():
     print("crucial environment variables are set...")
 
 def create_dir_structure():
-    lfs_dir_structure = [ "/etc", "/var", "/usr", "/tools",
-                          "/lib64", "/srcs", "/build-logs", 
-                          "/build-logs/tracked-files",
-                          "/usr/bin", "/usr/lib", "/usr/sbin",
-                          "/dev", "/proc", "/sys", "/run" ]
+    lfs_dir_structure = [ "etc", "var", "usr", "tools",
+                          "lib64", "srcs", "build-logs", 
+                          "build-logs/tracked-files",
+                          "usr/bin", "usr/lib", "usr/sbin",
+                          "dev", "proc", "sys", "run", "root"]
     if not os.path.exists(os.environ["LFS"]):
         os.mkdir(os.environ["LFS"])
     os.chdir(os.environ["LFS"])
@@ -33,6 +33,13 @@ def create_dir_structure():
                                                      os.environ["LFS"], directory))
     print("directory structure is created in " + os.environ["LFS"] + "...")
 
+def copy_build_scripts_into_lfs_dir():
+    if not os.path.exists(os.environ['LFS'] + "/root/build-scripts"):
+        ret = os.system(f"cp -r {os.environ['HOME']}/build-scripts {os.environ['LFS']}/root")
+        if ret != 0:
+            red_print("cp-ing build-scripts into $LFS/root failed for some reason!")
+    print("build scripts copied to lfs directory...")
+
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
     with open("tarball_urls",'r') as f:
@@ -42,11 +49,11 @@ def read_tarball_urls():
 
 def download_and_unpack_sources():
     urls = read_tarball_urls()
-    os.chdir(os.environ["LFS"] + "/srcs")
+    os.chdir(os.environ["LFS"] + "srcs")
     missing = []
     for url in urls:
         package_name = url.split("/")[-1]
-        dest = os.environ["LFS"] + "/srcs/" + package_name
+        dest = os.environ["LFS"] + "srcs/" + package_name
         package_name = package_name.split(".tar")[0]
         if package_name in os.listdir():
             continue
@@ -60,13 +67,13 @@ def download_and_unpack_sources():
         if ".tar" not in dest:
             continue
         if "tzdata2022c" in dest:
-            os.mkdir(os.environ["LFS"] + "/srcs/tzdata2022c")
-            os.chdir(os.environ["LFS"] + "/srcs/tzdata2022c")
+            os.mkdir(os.environ["LFS"] + "srcs/tzdata2022c")
+            os.chdir(os.environ["LFS"] + "srcs/tzdata2022c")
         #print("unpacking " + package_name + "...")
         os.system("tar -xvf " + dest + " > /dev/null")
         os.system("rm " + dest)
         if "tzdata2022c" in dest:
-            os.chdir(os.environ["LFS"] + "/srcs")
+            os.chdir(os.environ["LFS"] + "srcs")
     if missing == []:
         print("sources are all downloaded and unpacked...")
     else:
@@ -87,10 +94,6 @@ class Target:
             print(f"{name} already built...")
 
 def enter_chroot():
-    if not os.path.exists(f"{os.environ['LFS']}/root/build-scripts"):
-        ret = os.system(f"cp -r {os.environ['HOME']}/build-scripts {os.environ['LFS']}/root")
-        if ret != 0:
-            red_print("cp-ing build-scripts into $LFS/root failed for some reason!")
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
     os.environ = {"HOME" : "/root",
@@ -102,9 +105,10 @@ def enter_chroot():
 if __name__ == "__main__":
    
     check_env_vars()
-    create_dir_structure()
+    create_dir_structure() 
+    copy_build_scripts_into_lfs_dir()
     download_and_unpack_sources()
- 
+
     for target in [
         Target("cross_binutils",    f"/tools/bin/{os.environ['LFS_TGT']}-ld"),
         Target("cross_gcc",         f"/tools/bin/{os.environ['LFS_TGT']}-gcc"),

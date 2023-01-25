@@ -19,7 +19,7 @@ def clean_target_name(target_name):
 
 def find_source_dir(target_name):
     target_name = clean_target_name(target_name)
-    lfs_src_path = os.environ["LFS"] + "/srcs/"
+    lfs_src_path = os.environ["LFS"] + "srcs/"
     os.chdir(lfs_src_path)
     res = [p for p in os.listdir() if target_name == p[:len(target_name)]]
     res = [p for p in res if ".patch" not in p]
@@ -47,13 +47,13 @@ def vanilla_build(target_name, src_dir_name=None):
             src_dir_name = target_name
         src_dir_path = find_source_dir(src_dir_name)
         
-        build_script_path = os.environ["HOME"] + \
-                "/build-scripts/{}.sh".format(target_name.replace('_','-'))
+        build_script_path = os.environ["LFS"] + \
+                "root/build-scripts/{}.sh".format(target_name.replace('_','-'))
         
-        log_file_path = os.environ["LFS"] + "/build-logs/" + target_name
+        log_file_path = os.environ["LFS"] + "build-logs/" + target_name
         
         tracked_file_record_path = os.environ["LFS"] + \
-                "/build-logs/tracked-files/" + target_name
+                "build-logs/tracked-files/" + target_name
         
         snap1 = lfs_dir_snapshot()
 
@@ -90,7 +90,7 @@ def build_w_snapshots(build_func):
     print(f"building {clean_target_name(build_func.__name__).replace('_',' ')} with snapshots...")
     build_func()
     snap2 = lfs_dir_snapshot()
-    snap_f_path = os.environ["LFS"] + "/" + build_func.__name__ + "_new_files"
+    snap_f_path = os.environ["LFS"] + + build_func.__name__ + "_new_files"
     with open(snap_f_path, 'w') as f:
         f.write('\n'.join(snap2 - snap1))
 
