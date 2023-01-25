@@ -90,7 +90,7 @@ def build_w_snapshots(build_func):
     print(f"building {clean_target_name(build_func.__name__).replace('_',' ')} with snapshots...")
     build_func()
     snap2 = lfs_dir_snapshot()
-    snap_f_path = os.environ["LFS"] + + build_func.__name__ + "_new_files"
+    snap_f_path = os.environ["LFS"] + build_func.__name__ + "_new_files"
     with open(snap_f_path, 'w') as f:
         f.write('\n'.join(snap2 - snap1))
 

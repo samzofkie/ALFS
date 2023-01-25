@@ -16,17 +16,18 @@ def check_env_vars():
     print("crucial environment variables are set...")
 
 def create_dir_structure():
-    lfs_dir_structure = [ "etc", "var", "usr", "tools",
-                          "lib64", "srcs", "build-logs", 
-                          "build-logs/tracked-files",
-                          "usr/bin", "usr/lib", "usr/sbin",
-                          "dev", "proc", "sys", "run", "root"]
     if not os.path.exists(os.environ["LFS"]):
         os.mkdir(os.environ["LFS"])
-    os.chdir(os.environ["LFS"])
-    for directory in lfs_dir_structure:
+    os.chdir(os.environ["LFS"])    
+
+    for directory in ["etc", "var", "usr", "tools", "lib64",
+        "usr/bin", "usr/lib", "usr/sbin", "root",
+        "srcs", "build-logs", "build-logs/tracked-files",
+        "dev", "proc", "sys", "run", "tmp"]:
+        
         if not os.path.exists(os.environ["LFS"] + directory):
             os.mkdir(os.environ["LFS"] + directory)
+    
     for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s usr/{} {}/{}".format(directory, 
@@ -57,7 +58,7 @@ def download_and_unpack_sources():
         package_name = package_name.split(".tar")[0]
         if package_name in os.listdir():
             continue
-        #print("downloading {}...".format(package_name))
+        print("downloading {}...".format(package_name))
         try:
             urllib.request.urlretrieve(url, dest)
         except:
@@ -100,6 +101,8 @@ def enter_chroot():
                   "TERM" : os.environ["TERM"],
                   "PATH" : "/usr/bin:/usr/sbin",
                   "LFS" : '/'}
+    if not os.path.exists("/tmp"):
+        os.system("install -d -m 1777 /tmp /var/tmp")
 
 
 if __name__ == "__main__":
