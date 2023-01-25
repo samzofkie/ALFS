@@ -27,9 +27,9 @@ def create_dir_structure():
     for directory in lfs_dir_structure:
         if not os.path.exists(os.environ["LFS"] + directory):
             os.mkdir(os.environ["LFS"] + directory)
-    for directory in ["/bin", "/lib", "/sbin"]:
+    for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
-            os.system("ln -s {}/usr{} {}{}".format(os.environ["LFS"], directory, 
+            os.system("ln -s usr/{} {}/{}".format(directory, 
                                                      os.environ["LFS"], directory))
     print("directory structure is created in " + os.environ["LFS"] + "...")
 
@@ -86,6 +86,18 @@ class Target:
         else:
             print(f"{name} already built...")
 
+def enter_chroot():
+    if not os.path.exists(f"{os.environ['LFS']}/root/build-scripts"):
+        ret = os.system(f"cp -r {os.environ['HOME']}/build-scripts {os.environ['LFS']}/root")
+        if ret != 0:
+            red_print("cp-ing build-scripts into $LFS/root failed for some reason!")
+    os.chdir(os.environ["LFS"])
+    os.chroot(os.environ["LFS"])
+    os.environ = {"HOME" : "/root",
+                  "TERM" : os.environ["TERM"],
+                  "PATH" : "/usr/bin:/usr/sbin",
+                  "LFS" : '/'}
+
 
 if __name__ == "__main__":
    
@@ -120,24 +132,17 @@ if __name__ == "__main__":
     ]:
         target.build()
  
-    os.system("cp -r {}/build-scripts/ {}/root/".format(os.environ["LFS"],
-                                                        os.environ["HOME"]))
-    os.chdir(os.environ["LFS"])
-    os.chroot(os.environ["LFS"])
-    os.environ = {"HOME" : "/root",
-                  "TERM" : os.environ["TERM"],
-                  "PATH" : "/usr/bin:/usr/sbin",
-                  "LFS" : ''}
-   
+    enter_chroot()
+       
     for target in ["chroot_gettext", "chroot_bison", "chroot_perl",
-                   "chroot_python", "chroot_texinfo", "chroot_util-linux"]:
+                   "chroot_Python", "chroot_texinfo", "chroot_util-linux"]:
         build_w_snapshots(vanilla_build(target))
 
     """for target in [
         Target("chroot_gettext",    ""),
         Target("chroot_bison",      ""),
         Target("chroot_perl",       ""),
-        Target("chroot_python",     ""),
+        Target("chroot_Python",     ""),
         Target("chroot_texinfo",    ""),
         Target("chroot_util-linux", "")
     ]:
