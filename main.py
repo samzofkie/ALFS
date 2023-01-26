@@ -3,6 +3,7 @@
 import os
 import urllib.request
 import sys
+import subprocess
 
 from utils import vanilla_build, red_print, build_w_snapshots
 
@@ -94,6 +95,24 @@ class Target:
         else:
             print(f"{name} already built...")
 
+# Mount virtual kernel filesystems
+def mount_vkfs():
+    mount_info = subprocess.run("mount", stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+    mount_info = str(mount_info)[2:].split('\\n')
+    mount_info = [line for line in mount_info 
+                  if os.environ["LFS"] in line]
+    if mount_info != []:
+        return
+
+    for command in [ "mount -v --bind /dev {}dev",
+                     "mount -v --bind /dev/pts {}dev/pts",
+                     "mount -vt proc proc {}proc",
+                     "mount -vt sysfs sysfs {}sys",
+                     "mount -vt tmpfs tmpfs {}run" ]:
+        if os.system(command.format(os.environ["LFS"])) != 0:
+            red_print(command.format(os.environ["LFS"]) + " failed!")
+
 def enter_chroot():
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
@@ -139,19 +158,18 @@ if __name__ == "__main__":
     ]:
         target.build()
  
+    mount_vkfs()
     enter_chroot()
        
-    for target in ["chroot_gettext", "chroot_bison", "chroot_perl",
-                   "chroot_Python", "chroot_texinfo", "chroot_util-linux"]:
-        build_w_snapshots(vanilla_build(target))
-
-    """for target in [
-        Target("chroot_gettext",    ""),
-        Target("chroot_bison",      ""),
-        Target("chroot_perl",       ""),
-        Target("chroot_Python",     ""),
-        Target("chroot_texinfo",    ""),
-        Target("chroot_util-linux", "")
+    for target in [
+        Target("chroot_gettext",    "/usr/bin/msgfmt"),
+        Target("chroot_bison",      "/usr/bin/bison"),
+        Target("chroot_perl",       "/usr/bin/perl"),
+        Target("chroot_Python",     "/usr/bin/python3.10"),
+        Target("chroot_texinfo",    "/usr/bin/info"),
+        #Target("chroot_util-linux", "")
     ]:
-        target.build()"""
+        target.build()
+
+    build_w_snapshots(vanilla_build("chroot_util-linux"))
 
