@@ -4,6 +4,7 @@ import os
 import urllib.request
 import sys
 import subprocess
+import threading
 
 from utils import vanilla_build, red_print, build_w_snapshots
 
@@ -104,7 +105,6 @@ def mount_vkfs():
                   if os.environ["LFS"] in line]
     if mount_info != []:
         return
-
     for command in [ "mount -v --bind /dev {}dev",
                      "mount -v --bind /dev/pts {}dev/pts",
                      "mount -vt proc proc {}proc",
@@ -114,6 +114,9 @@ def mount_vkfs():
             red_print(command.format(os.environ["LFS"]) + " failed!")
 
 def enter_chroot():
+    mount_vkfs()
+    if not os.path.exists(os.environ["LFS"] + "etc/group"):
+        os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
     os.environ = {"HOME" : "/root",
@@ -158,18 +161,24 @@ if __name__ == "__main__":
     ]:
         target.build()
  
-    mount_vkfs()
-    enter_chroot()
-       
-    for target in [
-        Target("chroot_gettext",    "/usr/bin/msgfmt"),
-        Target("chroot_bison",      "/usr/bin/bison"),
-        Target("chroot_perl",       "/usr/bin/perl"),
-        Target("chroot_Python",     "/usr/bin/python3.10"),
-        Target("chroot_texinfo",    "/usr/bin/info"),
-        #Target("chroot_util-linux", "")
-    ]:
-        target.build()
 
-    build_w_snapshots(vanilla_build("chroot_util-linux"))
+    # If we enter the chroot we won't be able to get out of it, and
+    # I'd like to make a .tar snapshot backup of the whole lfs directory
+    # from the dir we started in. That's why we build the chroot packages
+    # in a child thread.
 
+    def build_chroot_packages():
+        enter_chroot()
+        for target in [
+            Target("chroot_gettext",    "/usr/bin/msgfmt"),
+            Target("chroot_bison",      "/usr/bin/bison"),
+            Target("chroot_perl",       "/usr/bin/perl"),
+            Target("chroot_Python",     "/usr/bin/python3.10"),
+            Target("chroot_texinfo",    "/usr/bin/info"),
+            Target("chroot_util-linux", "/usr/bin/dmesg")
+        ]:
+            target.build()
+
+    child = threading.Thread(target=build_chroot_packages)
+    child.start()
+    child.join()
