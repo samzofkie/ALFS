@@ -4,7 +4,7 @@ import os
 import urllib.request
 import sys
 import subprocess
-import threading
+import signal
 
 from utils import vanilla_build, red_print, build_w_snapshots
 
@@ -37,12 +37,12 @@ def create_dir_structure():
     print("directory structure is created in " + os.environ["LFS"] + "...")
 
 def copy_build_scripts_into_lfs_dir():
-    if not os.path.exists(os.environ['LFS'] + "/root/build-scripts"):
-        ret = os.system(f"cp -r {os.environ['HOME']}/build-scripts {os.environ['LFS']}/root")
-        if ret != 0:
-            red_print("cp-ing build-scripts into $LFS/root failed for some reason!")
-    print("build scripts copied to lfs directory...")
-
+    for script in os.listdir(os.environ['HOME']):
+        if not os.path.exists(os.environ["LFS"] + f"/root/build_scripts/{script}":
+            cp_comm = f"cp {os.environ['HOME']+'/'+script} {os.environ['LFS']+'build_scripts/}"
+            if os.system(cp_comm) != 0:
+                red_print(f"\"{cp_comm}\" failed!")
+ 
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
     with open("tarball_urls",'r') as f:
@@ -88,8 +88,11 @@ class Target:
         self.binary = os.environ["LFS"] + binary
         self.build_func = vanilla_build(name, alt_src_dir_name)
         
-    def build(self):
+    def build(self): 
         name = self.name.replace('_',' ')
+        if self.binary == os.environ["LFS"]:
+            build_w_snapshots(self.build_func)
+            return
         if not os.path.exists(self.binary):
             print(f"building {name}...")
             self.build_func()
@@ -114,18 +117,13 @@ def mount_vkfs():
             red_print(command.format(os.environ["LFS"]) + " failed!")
 
 def enter_chroot():
-    mount_vkfs()
-    if not os.path.exists(os.environ["LFS"] + "etc/group"):
-        os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
     os.environ = {"HOME" : "/root",
                   "TERM" : os.environ["TERM"],
                   "PATH" : "/usr/bin:/usr/sbin",
                   "LFS" : '/'}
-    if not os.path.exists("/tmp"):
-        os.system("install -d -m 1777 /tmp /var/tmp")
-
+    
 
 if __name__ == "__main__":
    
@@ -157,28 +155,30 @@ if __name__ == "__main__":
         Target("temp_tar",          "/usr/bin/tar"),
         Target("temp_xz",           "/usr/bin/xz"),
         Target("temp_binutils",     "/usr/bin/ld"),
-        Target("temp_gcc",          "/usr/bin/gcc")
-    ]:
+        Target("temp_gcc",          "/usr/bin/gcc") ]:
         target.build()
  
 
-    # If we enter the chroot we won't be able to get out of it, and
-    # I'd like to make a .tar snapshot backup of the whole lfs directory
-    # from the dir we started in. That's why we build the chroot packages
-    # in a child thread.
+    mount_vkfs()
+    if not os.path.exists(os.environ["LFS"] + "etc/group"):
+        os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
+    if not os.path.exists("/tmp"):
+        os.system("install -d -m 1777 /tmp /var/tmp")
+    enter_chroot()
 
-    def build_chroot_packages():
-        enter_chroot()
-        for target in [
+    for target in [
             Target("chroot_gettext",    "/usr/bin/msgfmt"),
             Target("chroot_bison",      "/usr/bin/bison"),
             Target("chroot_perl",       "/usr/bin/perl"),
             Target("chroot_Python",     "/usr/bin/python3.10"),
             Target("chroot_texinfo",    "/usr/bin/info"),
-            Target("chroot_util-linux", "/usr/bin/dmesg")
+            Target("chroot_util-linux", "/usr/bin/dmesg") ]:
+        target.build()
+    
+    for target in [
+            Target("man-pages",         ""),
+            Target("iana-etc",          ""),
+            Target("glibc",             ""),
+            Target("zlib",              "")
         ]:
-            target.build()
-
-    child = threading.Thread(target=build_chroot_packages)
-    child.start()
-    child.join()
+        target.build()
