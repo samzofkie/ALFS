@@ -85,3 +85,5 @@ https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.46.5/e2fsprogs-
 https://www.infodrom.org/projects/sysklogd/download/sysklogd-1.5.1.tar.gz
 https://download.savannah.gnu.org/releases/sysvinit/sysvinit-3.04.tar.xz
 https://www.linuxfromscratch.org/patches/lfs/11.2/sysvinit-3.04-consolidated-1.patch
+
+http://ftp.osuosl.org/pub/lfs/lfs-packages/11.2/lfs-bootscripts-20220723.tar.xz

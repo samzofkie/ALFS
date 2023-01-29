@@ -21,7 +21,6 @@ def create_dir_structure():
     if not os.path.exists(os.environ["LFS"]):
         os.mkdir(os.environ["LFS"])
     os.chdir(os.environ["LFS"])    
-
     for directory in ["etc", "var", "usr", "tools", "lib64",
         "usr/bin", "usr/lib", "usr/sbin", "root",
         "srcs", "build-logs", "build-logs/tracked-files",
@@ -29,7 +28,6 @@ def create_dir_structure():
         
         if not os.path.exists(os.environ["LFS"] + directory):
             os.mkdir(os.environ["LFS"] + directory)
-    
     for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s usr/{} {}/{}".format(directory, 
@@ -37,11 +35,9 @@ def create_dir_structure():
     print("directory structure is created in " + os.environ["LFS"] + "...")
 
 def copy_build_scripts_into_lfs_dir():
-    for script in os.listdir(os.environ['HOME']):
-        if not os.path.exists(os.environ["LFS"] + f"/root/build_scripts/{script}":
-            cp_comm = f"cp {os.environ['HOME']+'/'+script} {os.environ['LFS']+'build_scripts/}"
-            if os.system(cp_comm) != 0:
-                red_print(f"\"{cp_comm}\" failed!")
+    ret = os.system(f"cp -r $HOME/build-scripts {os.environ['LFS']}root/build-scripts")
+    if ret != 0:
+        red_print("copying build-scripts failed!")
  
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
@@ -58,6 +54,14 @@ def download_and_unpack_sources():
         package_name = url.split("/")[-1]
         dest = os.environ["LFS"] + "srcs/" + package_name
         package_name = package_name.split(".tar")[0]
+        if 'tcl' in package_name:
+            simple_name = package_name.split('-')[0]
+            if 'src' in package_name:
+                package_name = simple_name
+            if 'html' in package_name:
+                if os.path.exists(os.environ["LFS"] + "srcs/" + 
+                                  package_name.split('-')[0] + '/html'):
+                    package_name = simple_name
         if package_name in os.listdir():
             continue
         print("downloading {}...".format(package_name))
@@ -72,7 +76,6 @@ def download_and_unpack_sources():
         if "tzdata2022c" in dest:
             os.mkdir(os.environ["LFS"] + "srcs/tzdata2022c")
             os.chdir(os.environ["LFS"] + "srcs/tzdata2022c")
-        #print("unpacking " + package_name + "...")
         os.system("tar -xvf " + dest + " > /dev/null")
         os.system("rm " + dest)
         if "tzdata2022c" in dest:
@@ -175,10 +178,18 @@ if __name__ == "__main__":
             Target("chroot_util-linux", "/usr/bin/dmesg") ]:
         target.build()
     
-    for target in [
+    """for target in [
             Target("man-pages",         ""),
             Target("iana-etc",          ""),
             Target("glibc",             ""),
-            Target("zlib",              "")
+            Target("zlib",              ""),
+            Target("bzip2",             ""),
+            Target("xz",                ""),
+            Target("zstd",              ""),
+            Target("file",              ""),
+            Target("readline",          ""),
+            Target("m4",                ""),
+            Target("bc",                ""),
+            Target("flex",              "")
         ]:
-        target.build()
+        target.build()"""
