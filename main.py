@@ -15,7 +15,6 @@ def check_env_vars():
     except KeyError:
         print(f"{var} env var not set. bye!")
         sys.exit(1)
-    print("crucial environment variables are set...")
 
 def create_dir_structure():
     if not os.path.exists(os.environ["LFS"]):
@@ -32,7 +31,6 @@ def create_dir_structure():
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s usr/{} {}/{}".format(directory, 
                                                      os.environ["LFS"], directory))
-    print("directory structure is created in " + os.environ["LFS"] + "...")
 
 def copy_build_scripts_into_lfs_dir():
     ret = os.system(f"cp -r $HOME/build-scripts {os.environ['LFS']}root/build-scripts")
@@ -46,22 +44,13 @@ def read_tarball_urls():
     urls = [url.strip('\n') for url in urls]
     return [url for url in urls if url != '']
 
-def download_and_unpack_sources():
+def download_tarballs():
     urls = read_tarball_urls()
     os.chdir(os.environ["LFS"] + "srcs")
     missing = []
     for url in urls:
         package_name = url.split("/")[-1]
         dest = os.environ["LFS"] + "srcs/" + package_name
-        package_name = package_name.split(".tar")[0]
-        if 'tcl' in package_name:
-            simple_name = package_name.split('-')[0]
-            if 'src' in package_name:
-                package_name = simple_name
-            if 'html' in package_name:
-                if os.path.exists(os.environ["LFS"] + "srcs/" + 
-                                  package_name.split('-')[0] + '/html'):
-                    package_name = simple_name
         if package_name in os.listdir():
             continue
         print("downloading {}...".format(package_name))
@@ -71,18 +60,7 @@ def download_and_unpack_sources():
             red_print("failed to download {}!".format(package_name))
             missing.append(package_name)
             continue
-        if ".tar" not in dest:
-            continue
-        if "tzdata2022c" in dest:
-            os.mkdir(os.environ["LFS"] + "srcs/tzdata2022c")
-            os.chdir(os.environ["LFS"] + "srcs/tzdata2022c")
-        os.system("tar -xvf " + dest + " > /dev/null")
-        os.system("rm " + dest)
-        if "tzdata2022c" in dest:
-            os.chdir(os.environ["LFS"] + "srcs")
-    if missing == []:
-        print("sources are all downloaded and unpacked...")
-    else:
+    if missing != []:
         red_print("missing " + ' '.join(missing) + '!')
 
 class Target:
@@ -133,7 +111,7 @@ if __name__ == "__main__":
     check_env_vars()
     create_dir_structure() 
     copy_build_scripts_into_lfs_dir()
-    download_and_unpack_sources()
+    download_tarballs()
 
     for target in [
         Target("cross_binutils",    f"/tools/bin/{os.environ['LFS_TGT']}-ld"),
@@ -177,10 +155,12 @@ if __name__ == "__main__":
             Target("chroot_texinfo",    "/usr/bin/info"),
             Target("chroot_util-linux", "/usr/bin/dmesg") ]:
         target.build()
-    
-    """for target in [
-            Target("man-pages",         ""),
-            Target("iana-etc",          ""),
+   
+    sys.exit(0)
+
+    for target in [
+            Target("man-pages",         "/usr/share/man/man7/man.7"),
+            Target("iana-etc",          "/etc/services"),
             Target("glibc",             ""),
             Target("zlib",              ""),
             Target("bzip2",             ""),
@@ -192,4 +172,4 @@ if __name__ == "__main__":
             Target("bc",                ""),
             Target("flex",              "")
         ]:
-        target.build()"""
+        target.build()

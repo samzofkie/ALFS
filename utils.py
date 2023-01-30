@@ -17,20 +17,19 @@ def clean_target_name(target_name):
             target_name = target_name.replace(prefix, '')
     return target_name
 
-def find_source_dir(target_name):
+def find_tarball(target_name):
     target_name = clean_target_name(target_name)
-    lfs_src_path = os.environ["LFS"] + "srcs/"
-    os.chdir(lfs_src_path)
-    res = [p for p in os.listdir() if target_name == p[:len(target_name)]]
-    res = [p for p in res if ".patch" not in p]
-    if len(res) > 1:
-        print("ambiguous target name passed to find_source_dir: cleaned target name is " + \
+    os.chdir(os.environ["LFS"] + "srcs/")
+    res = [p for p in os.listdir() if target_name == p[:len(target_name)] 
+                                      and ".patch" not in p]
+    if len(res) == 1:
+        return os.environ["LFS"] + "srcs/" + res[0]
+    elif len(res) > 1:
+        red_print("ambiguous target name passed to find_source_dir: cleaned target name is " + \
                 target_name)
-        sys.exit(1)
     elif len(res) == 0:
-        print("cleaned target name ({}) in find_source_dir turned up no results".format(target_name))
-        sys.exit(1)
-    return lfs_src_path + res[0]
+        red_print("cleaned target name ({}) in find_source_dir turned up no results".format(target_name))
+    sys.exit(1)
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
@@ -41,21 +40,22 @@ def lfs_dir_snapshot():
 
 def vanilla_build(target_name, src_dir_name=None):
     def f():
-        
         nonlocal src_dir_name
         if src_dir_name == None:
             src_dir_name = target_name
-        src_dir_path = find_source_dir(src_dir_name)
-        
+
+        tarball_path = find_tarball(src_dir_name)
+        src_dir_path = tarball_path.split(".tar")[0]
         build_script_path = os.environ["LFS"] + \
                 "root/build-scripts/{}.sh".format(target_name.replace('_','-'))
-        
-        log_file_path = os.environ["LFS"] + "build-logs/" + target_name
-        
+        log_file_path = os.environ["LFS"] + "build-logs/" + target_name 
         tracked_file_record_path = os.environ["LFS"] + \
                 "build-logs/tracked-files/" + target_name
         
         snap1 = lfs_dir_snapshot()
+    
+        os.chdir(os.environ["LFS"] + "srcs/")
+        os.system("tar -xf " + tarball_path)
 
         os.chdir(src_dir_path) 
         
@@ -72,6 +72,9 @@ def vanilla_build(target_name, src_dir_name=None):
         if ret != 0:
             red_print(build_script_path + " failed!")
             return
+        
+        os.chdir(os.environ["LFS"] + "srcs/")
+        os.system("rm -rf " + src_dir_path)
 
         new_files = lfs_dir_snapshot() - snap1
         
@@ -93,4 +96,3 @@ def build_w_snapshots(build_func):
     snap_f_path = os.environ["LFS"] + build_func.__name__ + "_new_files"
     with open(snap_f_path, 'w') as f:
         f.write('\n'.join(snap2 - snap1))
-
