@@ -1,4 +1,5 @@
 set -e
+./contrib/download_prerequisites
 sed -e '/m64=/s/lib64/lib/' -i.orig gcc/config/i386/t-linux64
 sed '/thread_header =/s/@.*@/gthr-posix.h/' \
   -i libgcc/Makefile.in libstdc++-v3/include/Makefile.in

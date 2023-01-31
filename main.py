@@ -21,7 +21,7 @@ def create_dir_structure():
         os.mkdir(os.environ["LFS"])
     os.chdir(os.environ["LFS"])    
     for directory in ["etc", "var", "usr", "tools", "lib64",
-        "usr/bin", "usr/lib", "usr/sbin", "root",
+        "usr/bin", "usr/lib", "usr/sbin", "root", "root/build-scripts",
         "srcs", "build-logs", "build-logs/tracked-files",
         "dev", "proc", "sys", "run", "tmp"]:
         
@@ -30,13 +30,13 @@ def create_dir_structure():
     for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s usr/{} {}/{}".format(directory, 
-                                                     os.environ["LFS"], directory))
+                                        os.environ["LFS"], directory))
 
 def copy_build_scripts_into_lfs_dir():
-    ret = os.system(f"cp -r $HOME/build-scripts {os.environ['LFS']}root/build-scripts")
+    ret = os.system(f"cp -r $HOME/build-scripts/* {os.environ['LFS']}root/build-scripts")
     if ret != 0:
         red_print("copying build-scripts failed!")
- 
+     
 def read_tarball_urls():
     os.chdir(os.environ["HOME"])
     with open("tarball_urls",'r') as f:
