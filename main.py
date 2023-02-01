@@ -155,9 +155,7 @@ if __name__ == "__main__":
             Target("chroot_texinfo",    "/usr/bin/info"),
             Target("chroot_util-linux", "/usr/bin/dmesg") ]:
         target.build()
-   
-    sys.exit(0)
-
+  
     for target in [
             Target("man-pages",         "/usr/share/man/man7/man.7"),
             Target("iana-etc",          "/etc/services"),

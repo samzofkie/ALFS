@@ -58,24 +58,18 @@ def vanilla_build(target_name, src_dir_name=None):
         os.system("tar -xf " + tarball_path)
 
         os.chdir(src_dir_path) 
-        
-        with subprocess.Popen(build_script_path, shell=True,
-                              stdout=subprocess.PIPE, text=True, 
-                              stderr=subprocess.STDOUT) as p:
-            output = p.stdout.read()
-            p.wait()
-            ret = p.returncode
-        
-        with open(log_file_path, 'a') as f:
-            f.writelines(output)
-
-        if ret != 0:
-            red_print(build_script_path + " failed!")
-            return
+       
+        proc = subprocess.run(f"{build_script_path} 2>&1 | tee -a {log_file_path}",
+                              shell=True, stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT)
         
         os.chdir(os.environ["LFS"] + "srcs/")
         os.system("rm -rf " + src_dir_path)
 
+        if proc.returncode != 0:
+            red_print(build_script_path + " failed!")
+            return
+         
         new_files = lfs_dir_snapshot() - snap1
         
         with open(tracked_file_record_path, 'w') as f:
