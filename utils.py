@@ -22,6 +22,10 @@ def find_tarball(target_name):
     os.chdir(os.environ["LFS"] + "srcs/")
     res = [p for p in os.listdir() if target_name == p[:len(target_name)] 
                                       and ".patch" not in p]
+    
+    if "tcl" in target_name:
+        res.remove("tcl8.6.12-html.tar.gz")
+
     if len(res) == 1:
         return os.environ["LFS"] + "srcs/" + res[0]
     elif len(res) > 1:
@@ -33,7 +37,7 @@ def find_tarball(target_name):
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
-    res = subprocess.run(f"find {os.environ['LFS']} -type f", 
+    res = subprocess.run(f"find {os.environ['LFS']+'usr'} -type f", 
                               shell=True, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
     return set(str(res.stdout).split('\\n'))
@@ -46,6 +50,10 @@ def vanilla_build(target_name, src_dir_name=None):
 
         tarball_path = find_tarball(src_dir_name)
         src_dir_path = tarball_path.split(".tar")[0]
+
+        if "tcl" in src_dir_path:
+            src_dir_path = src_dir_path.rsplit("-",1)[0]
+
         build_script_path = os.environ["LFS"] + \
                 "root/build-scripts/{}.sh".format(target_name.replace('_','-'))
         log_file_path = os.environ["LFS"] + "build-logs/" + target_name 
@@ -56,7 +64,6 @@ def vanilla_build(target_name, src_dir_name=None):
     
         os.chdir(os.environ["LFS"] + "srcs/")
         os.system("tar -xf " + tarball_path)
-
         os.chdir(src_dir_path) 
        
         proc = subprocess.run(f"{build_script_path} 2>&1 | tee -a {log_file_path}",

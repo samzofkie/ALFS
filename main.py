@@ -77,8 +77,6 @@ class Target:
         if not os.path.exists(self.binary):
             print(f"building {name}...")
             self.build_func()
-        else:
-            print(f"{name} already built...")
 
 # Mount virtual kernel filesystems
 def mount_vkfs():
@@ -148,26 +146,30 @@ if __name__ == "__main__":
     enter_chroot()
 
     for target in [
-            Target("chroot_gettext",    "/usr/bin/msgfmt"),
-            Target("chroot_bison",      "/usr/bin/bison"),
-            Target("chroot_perl",       "/usr/bin/perl"),
-            Target("chroot_Python",     "/usr/bin/python3.10"),
-            Target("chroot_texinfo",    "/usr/bin/info"),
-            Target("chroot_util-linux", "/usr/bin/dmesg") ]:
+        Target("chroot_gettext",    "/usr/bin/msgfmt"),
+        Target("chroot_bison",      "/usr/bin/bison"),
+        Target("chroot_perl",       "/usr/bin/perl"),
+        Target("chroot_Python",     "/usr/bin/python3.10"),
+        Target("chroot_texinfo",    "/usr/bin/info"),
+        Target("chroot_util-linux", "/usr/bin/dmesg") ]:
         target.build()
   
     for target in [
-            Target("man-pages",         "/usr/share/man/man7/man.7"),
-            Target("iana-etc",          "/etc/services"),
-            Target("glibc",             ""),
-            Target("zlib",              ""),
-            Target("bzip2",             ""),
-            Target("xz",                ""),
-            Target("zstd",              ""),
-            Target("file",              ""),
-            Target("readline",          ""),
-            Target("m4",                ""),
-            Target("bc",                ""),
-            Target("flex",              "")
+        Target("man-pages",         "/usr/share/man/man7/man.7"),
+        Target("iana-etc",          "/etc/services"),
+        Target("glibc",             "/usr/lib/libz.so"), # haha
+        Target("zlib",              "/usr/lib/libz.so"),
+        Target("bzip2",             "/usr/bin/bzip2"),
+        Target("xz",                "/usr/lib/liblzma.la"),
+        Target("zstd",              "/usr/bin/zstd"),
+        Target("file",              "/usr/lib/libmagic.la"),
+        Target("readline",          "/usr/lib/libreadline.so"),
+        Target("m4",                "/usr/bin/bc"), # ^
+        Target("bc",                "/usr/bin/bc"),
+        Target("flex",              "/usr/bin/flex"),
+        Target("tcl",               ""),
+        Target("expect",            ""),
+        Target("dejagnu",           ""),
+        Target("binutils",          "")
         ]:
         target.build()
