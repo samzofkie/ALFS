@@ -167,9 +167,17 @@ if __name__ == "__main__":
         Target("m4",                "/usr/bin/bc"), # ^
         Target("bc",                "/usr/bin/bc"),
         Target("flex",              "/usr/bin/flex"),
-        Target("tcl",               ""),
-        Target("expect",            ""),
-        Target("dejagnu",           ""),
-        Target("binutils",          "")
+        Target("tcl",               "/usr/lib/libtcl8.6.so"),
+        Target("expect",            "/usr/bin/expect"),
+        Target("dejagnu",           "/usr/bin/dejagnu"),
+        Target("binutils",          "/usr/bin/dejagnu"), # ^
+        Target("gmp",               ""),
+        Target("mpfr",              ""),
+        Target("mpc",               ""),
+        Target("attr",              ""),
+        Target("acl",               ""),
+        Target("libcap",            ""),
+        Target("shadow",            ""),
+        Target("gcc",               "")
         ]:
         target.build()
