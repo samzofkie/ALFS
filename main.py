@@ -193,5 +193,10 @@ if __name__ == "__main__":
         Target("inetutils",         ""),
         Target("less",              ""),
         Target("perl",              ""),
+        Target("XML-Parser",        ""),
+        Target("intltool",          ""),
+        Target("autoconf",          ""),
+        Target("automake",          ""),
+        Target("openssl",           "")
         ]:
         target.build()
