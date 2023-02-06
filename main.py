@@ -193,5 +193,10 @@ if __name__ == "__main__":
         Target("inetutils",         "/usr/bin/ping"),
         Target("less",              "/usr/bin/less"),
         Target("perl",              "/usr/bin/less"),
+        Target("XML-Parser",        ""),
+        Target("intltool",          ""),
+        Target("autoconf",          ""),
+        Target("automake",          ""),
+        Target("openssl",           "")
         ]:
         target.build()
