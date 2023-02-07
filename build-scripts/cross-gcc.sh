@@ -8,7 +8,7 @@ cd ../gcc-build
 
 $SRC_DIR/configure \
   --target=$LFS_TGT \
-  --prefix=$LFS/tools \
+  --prefix=$LFS/cross-tools \
   --with-glibc-version=2.36 \
   --with-sysroot=$LFS \
   --with-newlib \

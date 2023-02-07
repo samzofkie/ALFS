@@ -1,5 +1,5 @@
 set -e
-./configure --prefix=/usr \
+./configure --prefix=/temp-tools \
   --host=$LFS_TGT \
   --build=$(build-aux/config.guess)
 make

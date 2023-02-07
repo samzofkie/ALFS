@@ -1,6 +1,6 @@
 set -e
 sed -i 's/extras//' Makefile.in
-./configure --prefix=/usr \
+./configure --prefix=/temp-tools \
   --host=$LFS_TGT \
   --build=$(build-aux/config.guess)
 make

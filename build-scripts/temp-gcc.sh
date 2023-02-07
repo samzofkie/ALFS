@@ -9,21 +9,21 @@ mkdir -v ../gcc-build
 cd ../gcc-build
 
 $SRC_DIR/configure --build=$(../config.guess) \
---host=$LFS_TGT \
---target=$LFS_TGT \
-LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc \
---prefix=/usr \
---with-build-sysroot=$LFS \
---enable-initfini-array \
---disable-nls \
---disable-multilib \
---disable-decimal-float \
---disable-libatomic \
---disable-libgomp \
---disable-libquadmath \
---disable-libssp \
---disable-libvtv \
---enable-languages=c,c++
+  --host=$LFS_TGT \
+  --target=$LFS_TGT \
+  LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc \
+  --prefix=/temp-tools \
+  --with-build-sysroot=$LFS \
+  --enable-initfini-array \
+  --disable-nls \
+  --disable-multilib \
+  --disable-decimal-float \
+  --disable-libatomic \
+  --disable-libgomp \
+  --disable-libquadmath \
+  --disable-libssp \
+  --disable-libvtv \
+  --enable-languages=c,c++
 make
 make DESTDIR=$LFS install
 ln -sv gcc $LFS/usr/bin/cc

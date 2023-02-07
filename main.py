@@ -20,11 +20,14 @@ def create_dir_structure():
     if not os.path.exists(os.environ["LFS"]):
         os.mkdir(os.environ["LFS"])
     os.chdir(os.environ["LFS"])    
-    for directory in ["etc", "var", "usr", "tools", "lib64",
-        "usr/bin", "usr/lib", "usr/sbin", "root", "root/build-scripts",
-        "srcs", "build-logs", "build-logs/tracked-files",
-        "dev", "proc", "sys", "run", "tmp"]:
-        
+    for directory in [
+            "etc", "lib64", "root", "run", "usr", "var",
+            "usr/bin", "usr/sbin", "usr/lib",
+            "cross-tools", "temp-tools",
+            "logs", "logs/tracked",
+            "srcs",
+            "root/build-scripts",
+            "dev", "proc", "sys", "tmp"]: 
         if not os.path.exists(os.environ["LFS"] + directory):
             os.mkdir(os.environ["LFS"] + directory)
     for directory in ["bin", "lib", "sbin"]:
@@ -100,7 +103,7 @@ def enter_chroot():
     os.chroot(os.environ["LFS"])
     os.environ = {"HOME" : "/root",
                   "TERM" : os.environ["TERM"],
-                  "PATH" : "/usr/bin:/usr/sbin",
+                  "PATH" : "/usr/bin:/usr/sbin:/temp-tools",
                   "LFS" : '/'}
     
 
@@ -112,31 +115,32 @@ if __name__ == "__main__":
     download_tarballs()
 
     for target in [
-        Target("cross_binutils",    f"/tools/bin/{os.environ['LFS_TGT']}-ld"),
-        Target("cross_gcc",         f"/tools/bin/{os.environ['LFS_TGT']}-gcc"),
-        Target("linux_api_headers", "/usr/include/linux", "linux"),
-        Target("cross_glibc",       "/usr/lib/libc.so"),
-        Target("cross_libstdcpp",   "/usr/lib/libstdc++.so", "gcc"),
+        Target("cross_binutils",    ""),
+        Target("cross_gcc",         ""),
+        Target("linux_api_headers", "", "linux"),
+        Target("cross_glibc",       ""),
+        Target("cross_libstdcpp",   "", "gcc"),
 
-        Target("temp_m4",           "/usr/bin/m4"),
-        Target("temp_ncurses",      "/usr/lib/libncurses.so"),
-        Target("temp_bash",         "/usr/bin/bash"),
-        Target("temp_coreutils",    "/usr/bin/ls"),
-        Target("temp_diffutils",    "/usr/bin/diff"),
-        Target("temp_file",         "/usr/bin/file"),
-        Target("temp_findutils",    "/usr/bin/find"),
-        Target("temp_gawk",         "/usr/bin/gawk"),
-        Target("temp_grep",         "/usr/bin/grep"),
-        Target("temp_gzip",         "/usr/bin/gzip"),
-        Target("temp_make",         "/usr/bin/make"),
-        Target("temp_patch",        "/usr/bin/patch"),
-        Target("temp_sed",          "/usr/bin/sed"),
-        Target("temp_tar",          "/usr/bin/tar"),
-        Target("temp_xz",           "/usr/bin/xz"),
-        Target("temp_binutils",     "/usr/bin/ld"),
-        Target("temp_gcc",          "/usr/bin/gcc") ]:
+        Target("temp_m4",           ""),
+        Target("temp_ncurses",      ""),
+        Target("temp_bash",         ""),
+        Target("temp_coreutils",    ""),
+        Target("temp_diffutils",    ""),
+        Target("temp_file",         ""),
+        Target("temp_findutils",    ""),
+        Target("temp_gawk",         ""),
+        Target("temp_grep",         ""),
+        Target("temp_gzip",         ""),
+        Target("temp_make",         ""),
+        Target("temp_patch",        ""),
+        Target("temp_sed",          ""),
+        Target("temp_tar",          ""),
+        Target("temp_xz",           ""),
+        Target("temp_binutils",     ""),
+        Target("temp_gcc",          "") ]:
         target.build()
- 
+
+    sys.exit(0)
 
     mount_vkfs()
     if not os.path.exists(os.environ["LFS"] + "etc/group"):

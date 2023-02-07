@@ -4,7 +4,7 @@ sed '6009s/$add_dir//' -i ltmain.sh
 mkdir -v build
 cd build
 ../configure \
-  --prefix=/usr \
+  --prefix=/temp-tools \
   --build=$(../config.guess) \
   --host=$LFS_TGT \
   --disable-nls \
@@ -14,5 +14,5 @@ cd build
   --enable-64-bit-bfd
 make
 make DESTDIR=$LFS install
-rm -v $LFS/usr/lib/lib{bfd,ctf,ctf-nobfd,opcodes}.{a,la}
+rm -v $LFS/temp-tools/lib/lib{bfd,ctf,ctf-nobfd,opcodes}.{a,la}
 rm -rf build

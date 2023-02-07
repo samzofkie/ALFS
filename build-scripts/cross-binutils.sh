@@ -1,7 +1,7 @@
 set -e
 mkdir -v build
 cd build
-../configure --prefix=$LFS/tools \
+../configure --prefix=$LFS/cross-tools \
   --with-sysroot=$LFS \
   --target=$LFS_TGT \
   --disable-nls \
@@ -9,9 +9,9 @@ cd build
   --disable-werror
 make
 make install
-for tool in `ls $LFS/tools/$LFS_TGT/bin`
+for tool in `ls $LFS/cross-tools/$LFS_TGT/bin`
 do 
-  ln $LFS/tools/$LFS_TGT/bin/$tool $LFS/tools/bin/$tool
+  ln $LFS/cross-tools/$LFS_TGT/bin/$tool $LFS/cross-tools/bin/$tool
 done
 cd ..
 rm -rf build

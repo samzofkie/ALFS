@@ -6,11 +6,6 @@ import subprocess
 def red_print(s):
     print("\33[31m" + s + "\33[0m")
 
-def try_make_build_dir(path):
-    if os.path.exists(path):
-        os.system("rm -rf " + path)
-    os.mkdir(path)
-
 def clean_target_name(target_name):
     for prefix in ["temp_", "cross_", "chroot_"]:
         if prefix in target_name:
@@ -21,8 +16,7 @@ def find_tarball(target_name):
     target_name = clean_target_name(target_name)
     os.chdir(os.environ["LFS"] + "srcs/")
     res = [p for p in os.listdir() if target_name == p[:len(target_name)] 
-                                      and ".patch" not in p]
-    
+                                      and ".patch" not in p] 
     if "tcl" in target_name:
         res.remove("tcl8.6.12-html.tar.gz")
 
@@ -37,7 +31,7 @@ def find_tarball(target_name):
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
-    res = subprocess.run(f"find {os.environ['LFS']+'usr'} -type f", 
+    res = subprocess.run("find $LFS{etc,lib64,root,run,cross-tools,temp-tools,usr,var} -type f", 
                               shell=True, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
     return set(str(res.stdout).split('\\n'))
@@ -56,9 +50,9 @@ def vanilla_build(target_name, src_dir_name=None):
 
         build_script_path = os.environ["LFS"] + \
                 "root/build-scripts/{}.sh".format(target_name.replace('_','-'))
-        log_file_path = os.environ["LFS"] + "build-logs/" + target_name 
+        log_file_path = os.environ["LFS"] + "logs/" + target_name 
         tracked_file_record_path = os.environ["LFS"] + \
-                "build-logs/tracked-files/" + target_name
+                "logs/tracked/" + target_name
         
         snap1 = lfs_dir_snapshot()
     
