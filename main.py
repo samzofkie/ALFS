@@ -6,7 +6,7 @@ import sys
 import subprocess
 import signal
 
-from utils import vanilla_build, red_print, build_w_snapshots
+from utils import vanilla_build, red_print
 
 def check_env_vars():
     try:
@@ -73,12 +73,8 @@ class Target:
         self.build_func = vanilla_build(name, alt_src_dir_name)
         
     def build(self): 
-        name = self.name.replace('_',' ')
-        if self.binary == os.environ["LFS"]:
-            build_w_snapshots(self.build_func)
-            return
-        if not os.path.exists(self.binary):
-            print(f"building {name}...")
+        if not os.path.exists(self.binary) or self.binary == os.environ["LFS"]:
+            print(f"building {self.name.replace('_',' '}...")
             self.build_func()
 
 # Mount virtual kernel filesystems

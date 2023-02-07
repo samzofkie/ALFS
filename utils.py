@@ -31,7 +31,9 @@ def find_tarball(target_name):
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
-    res = subprocess.run("find $LFS{etc,lib64,root,run,cross-tools,temp-tools,usr,var} -type f", 
+    directories = ["etc", "lib64", "root", "run", "cross-tools", "temp-tools", "usr", "var"]
+    directories = [os.environ["LFS"] + i for i in directories]
+    res = subprocess.run(f"find {' '.join(directories)} -type f", 
                               shell=True, stdout=subprocess.PIPE,
                               stderr=subprocess.STDOUT)
     return set(str(res.stdout).split('\\n'))
@@ -82,12 +84,3 @@ def vanilla_build(target_name, src_dir_name=None):
 def get_version_num(target_name):
     src_dir = find_source_dir(target_name).split('/')[-1]
     return src_dir.split('-')[-1]
-
-def build_w_snapshots(build_func):
-    print(f"building {clean_target_name(build_func.__name__).replace('_',' ')} with snapshots...") 
-    snap1 = lfs_dir_snapshot()
-    build_func()
-    snap2 = lfs_dir_snapshot()
-    snap_f_path = os.environ["LFS"] + build_func.__name__ + "_new_files"
-    with open(snap_f_path, 'w') as f:
-        f.write('\n'.join(snap2 - snap1))
