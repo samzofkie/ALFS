@@ -74,7 +74,7 @@ class Target:
         
     def build(self): 
         if not os.path.exists(self.binary) or self.binary == os.environ["LFS"]:
-            print(f"building {self.name.replace('_',' '}...")
+            print(f"building {self.name.replace('_',' ')}...")
             self.build_func()
 
 # Mount virtual kernel filesystems
@@ -111,28 +111,28 @@ if __name__ == "__main__":
     download_tarballs()
 
     for target in [
-        Target("cross_binutils",    ""),
-        Target("cross_gcc",         ""),
-        Target("linux_api_headers", "", "linux"),
-        Target("cross_glibc",       ""),
-        Target("cross_libstdcpp",   "", "gcc"),
+        Target("cross_binutils",    "cross-tools/bin/ld"),
+        Target("cross_gcc",         "cross-tools/bin/x86_64-lfs-linux-gnu-gcc"),
+        Target("linux_api_headers", "usr/include/linux", "linux"),
+        Target("cross_glibc",       "usr/lib/libc.so"),
+        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc"),
 
-        Target("temp_m4",           ""),
-        Target("temp_ncurses",      ""),
-        Target("temp_bash",         ""),
+        Target("temp_m4",           "temp-tools/bin/m4"),
+        Target("temp_ncurses",      "temp-tools/lib/libncurses.so"),
+        Target("temp_bash",         "temp-tools/bin/bash"),
         Target("temp_coreutils",    ""),
-        Target("temp_diffutils",    ""),
-        Target("temp_file",         ""),
-        Target("temp_findutils",    ""),
-        Target("temp_gawk",         ""),
-        Target("temp_grep",         ""),
-        Target("temp_gzip",         ""),
-        Target("temp_make",         ""),
-        Target("temp_patch",        ""),
-        Target("temp_sed",          ""),
-        Target("temp_tar",          ""),
-        Target("temp_xz",           ""),
-        Target("temp_binutils",     ""),
+        Target("temp_diffutils",    "temp-tools/bin/diff"),
+        Target("temp_file",         "temp-tools/bin/file"),
+        Target("temp_findutils",    "temp-tools/bin/find"),
+        Target("temp_gawk",         "temp-tools/bin/gawk"),
+        Target("temp_grep",         "temp-tools/bin/grep"),
+        Target("temp_gzip",         "temp-tools/bin/gzip"),
+        Target("temp_make",         "temp-tools/bin/make"),
+        Target("temp_patch",        "temp-tools/bin/patch"),
+        Target("temp_sed",          "temp-tools/bin/sed"),
+        Target("temp_tar",          "temp-tools/bin/tar"),
+        Target("temp_xz",           "temp-tools/bin/xz"),
+        Target("temp_binutils",     "temp-tools/bin/ld"),
         Target("temp_gcc",          "") ]:
         target.build()
 
