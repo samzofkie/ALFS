@@ -58,13 +58,12 @@ def vanilla_build(target_name, src_dir_name=None):
         
         snap1 = lfs_dir_snapshot()
     
-        os.chdir(os.environ["LFS"] + "srcs/")
-        os.system("tar -xf " + tarball_path)
+        os.chdir(os.environ["LFS"] + "srcs/") 
+        subprocess.run(["tar", "-xf", tarball_path], check=True)
         os.chdir(src_dir_path) 
-       
-        proc = subprocess.run(f"{build_script_path} 2>&1 | tee -a {log_file_path}",
-                              shell=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT)
+      
+        proc = subprocess.run([f"{build_script_path} >{log_file_path} 2>&1"],
+                              shell=True)
         
         os.chdir(os.environ["LFS"] + "srcs/")
         os.system("rm -rf " + src_dir_path)
@@ -73,14 +72,9 @@ def vanilla_build(target_name, src_dir_name=None):
             red_print(build_script_path + " failed!")
             return
          
-        new_files = lfs_dir_snapshot() - snap1
-        
         with open(tracked_file_record_path, 'w') as f:
+            new_files = lfs_dir_snapshot() - snap1 
             f.writelines('\n'.join(new_files))
     
     f.__name__ = "build_" + target_name
     return f
-
-def get_version_num(target_name):
-    src_dir = find_source_dir(target_name).split('/')[-1]
-    return src_dir.split('-')[-1]
