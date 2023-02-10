@@ -1,5 +1,5 @@
 set -e
-./configure --prefix=/temp-tools \
+./configure --prefix=/usr/local \
   --build=$(support/config.guess) \
   --host=$LFS_TGT \
   --without-bash-malloc

@@ -23,7 +23,7 @@ def create_dir_structure():
     for directory in [
             "etc", "lib64", "root", "run", "usr", "var",
             "usr/bin", "usr/sbin", "usr/lib",
-            "cross-tools", "temp-tools",
+            "cross-tools", "usr/local",
             "logs", "logs/tracked",
             "srcs",
             "root/build-scripts",
@@ -97,11 +97,12 @@ def mount_vkfs():
 def enter_chroot():
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
-    os.environ = {"HOME" : "/root",
-                  "TERM" : os.environ["TERM"],
-                  "PATH" : "/usr/bin:/usr/sbin:/temp-tools",
-                  "LFS" : '/'}
-    
+    for k in os.environ:
+        if k != "TERM":
+            del os.environ[k]
+    os.environ["HOME"] = "/root"
+    os.environ["PATH"] = "/usr/bin:/usr/sbin:/usr/local/bin"
+    os.environ["LFS"] = '/'    
 
 if __name__ == "__main__":
    
@@ -117,26 +118,24 @@ if __name__ == "__main__":
         Target("cross_glibc",       "usr/lib/libc.so"),
         Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc"),
 
-        Target("temp_m4",           "temp-tools/bin/m4"),
-        Target("temp_ncurses",      "temp-tools/lib/libncurses.so"),
-        Target("temp_bash",         "temp-tools/bin/bash"),
+        Target("temp_m4",           ""),
+        Target("temp_ncurses",      ""),
+        Target("temp_bash",         ""),
         Target("temp_coreutils",    ""),
-        Target("temp_diffutils",    "temp-tools/bin/diff"),
-        Target("temp_file",         "temp-tools/bin/file"),
-        Target("temp_findutils",    "temp-tools/bin/find"),
-        Target("temp_gawk",         "temp-tools/bin/gawk"),
-        Target("temp_grep",         "temp-tools/bin/grep"),
-        Target("temp_gzip",         "temp-tools/bin/gzip"),
-        Target("temp_make",         "temp-tools/bin/make"),
-        Target("temp_patch",        "temp-tools/bin/patch"),
-        Target("temp_sed",          "temp-tools/bin/sed"),
-        Target("temp_tar",          "temp-tools/bin/tar"),
-        Target("temp_xz",           "temp-tools/bin/xz"),
-        Target("temp_binutils",     "temp-tools/bin/ld"),
+        Target("temp_diffutils",    ""),
+        Target("temp_file",         ""),
+        Target("temp_findutils",    ""),
+        Target("temp_gawk",         ""),
+        Target("temp_grep",         ""),
+        Target("temp_gzip",         ""),
+        Target("temp_make",         ""),
+        Target("temp_patch",        ""),
+        Target("temp_sed",          ""),
+        Target("temp_tar",          ""),
+        Target("temp_xz",           ""),
+        Target("temp_binutils",     ""),
         Target("temp_gcc",          "") ]:
         target.build()
-
-    sys.exit(0)
 
     mount_vkfs()
     if not os.path.exists(os.environ["LFS"] + "etc/group"):
@@ -146,31 +145,33 @@ if __name__ == "__main__":
     enter_chroot()
 
     for target in [
-        Target("chroot_gettext",    "/usr/bin/msgfmt"),
-        Target("chroot_bison",      "/usr/bin/bison"),
-        Target("chroot_perl",       "/usr/bin/perl"),
-        Target("chroot_Python",     "/usr/bin/python3.10"),
-        Target("chroot_texinfo",    "/usr/bin/info"),
-        Target("chroot_util-linux", "/usr/bin/dmesg") ]:
+        Target("temp_gettext",    ""),
+        Target("temp_bison",      ""),
+        Target("temp_perl",       ""),
+        Target("temp_Python",     ""),
+        Target("temp_texinfo",    ""),
+        Target("temp_util-linux", "") ]:
         target.build()
+
+    sys.exit(0)
   
     for target in [
         Target("man-pages",         "/usr/share/man/man7/man.7"),
         Target("iana-etc",          "/etc/services"),
-        Target("glibc",             "/usr/lib/libz.so"), # haha
+        Target("glibc",             ""),
         Target("zlib",              "/usr/lib/libz.so"),
         Target("bzip2",             "/usr/bin/bzip2"),
         Target("xz",                "/usr/lib/liblzma.la"),
         Target("zstd",              "/usr/bin/zstd"),
         Target("file",              "/usr/lib/libmagic.la"),
         Target("readline",          "/usr/lib/libreadline.so"),
-        Target("m4",                "/usr/bin/bc"), # ^
+        Target("m4",                ""),
         Target("bc",                "/usr/bin/bc"),
         Target("flex",              "/usr/bin/flex"),
         Target("tcl",               "/usr/lib/libtcl8.6.so"),
         Target("expect",            "/usr/bin/expect"),
         Target("dejagnu",           "/usr/bin/dejagnu"),
-        Target("binutils",          "/usr/bin/dejagnu"), # ^
+        Target("binutils",          ""),
         Target("gmp",               "/usr/lib/libgmp.so"),
         Target("mpfr",              "/usr/lib/libmpfr.so"),
         Target("mpc",               "/usr/lib/libmpc.so"),
@@ -181,18 +182,18 @@ if __name__ == "__main__":
         Target("gcc",               "/usr/bin/x86_64-pc-linux-gnu-gcc"),
         Target("pkg-config",        "/usr/bin/pkg-config"),
         Target("sed",               "/usr/bin/pkg-config"),
-        Target("psmisc",            "/usr/bin/killall"),
-        Target("gettext",           "/usr/bin/killall"),
-        Target("bison",             "/usr/bin/killall"),
-        Target("grep",              "/usr/bin/killall"),
-        Target("bash",              "/usr/bin/killall"),
-        Target("libtool",           "/usr/bin/killall"),
+        Target("psmisc",            ""),
+        Target("gettext",           ""),
+        Target("bison",             ""),
+        Target("grep",              ""),
+        Target("bash",              ""),
+        Target("libtool",           ""),
         Target("gdbm",              "/usr/lib/gdbm.so"),
         Target("gperf",             "/usr/bin/gperf"),
         Target("expat",             "/usr/lib/expat.so"),
         Target("inetutils",         "/usr/bin/ping"),
         Target("less",              "/usr/bin/less"),
-        Target("perl",              "/usr/bin/less"),
+        Target("perl",              ""),
         Target("XML-Parser",        ""),
         Target("intltool",          ""),
         Target("autoconf",          ""),

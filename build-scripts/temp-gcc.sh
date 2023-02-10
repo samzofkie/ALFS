@@ -12,7 +12,7 @@ $SRC_DIR/configure --build=$(../config.guess) \
   --host=$LFS_TGT \
   --target=$LFS_TGT \
   LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc \
-  --prefix=/temp-tools \
+  --prefix=/usr/local \
   --with-build-sysroot=$LFS \
   --enable-initfini-array \
   --disable-nls \
