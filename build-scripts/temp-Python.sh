@@ -1,5 +1,5 @@
 set -e
-./configure --prefix=/temp-tools \
+./configure --prefix=/usr/local \
   --enable-shared \
   --without-ensurepip
 make

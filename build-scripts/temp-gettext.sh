@@ -1,4 +1,4 @@
 set -e
 ./configure --disable-shared
 make
-cp -v gettext-tools/src/{msgfmt,msgmerge,xgettext} /temp-tools/bin
+cp -v gettext-tools/src/{msgfmt,msgmerge,xgettext} /usr/local/bin

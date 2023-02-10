@@ -1,7 +1,7 @@
 set -e
 sh Configure -des \
-  -Dprefix=/temp-tools \
-  -Dvendorprefix=/temp-tools \
+  -Dprefix=/usr/local \
+  -Dvendorprefix=/usr/local \
   -Dprivlib=/usr/lib/perl5/5.36/core_perl \
   -Darchlib=/usr/lib/perl5/5.36/core_perl \
   -Dsitelib=/usr/lib/perl5/5.36/site_perl \

@@ -1,4 +1,4 @@
 set -e
-./configure --prefix=/temp-tools
+./configure --prefix=/usr/local
 make
 make install

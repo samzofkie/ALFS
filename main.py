@@ -102,7 +102,8 @@ def enter_chroot():
             del os.environ[k]
     os.environ["HOME"] = "/root"
     os.environ["PATH"] = "/usr/bin:/usr/sbin:/usr/local/bin"
-    os.environ["LFS"] = '/'    
+    os.environ["LFS"] = '/'
+    os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib"
 
 if __name__ == "__main__":
    
@@ -118,23 +119,23 @@ if __name__ == "__main__":
         Target("cross_glibc",       "usr/lib/libc.so"),
         Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc"),
 
-        Target("temp_m4",           ""),
-        Target("temp_ncurses",      ""),
-        Target("temp_bash",         ""),
-        Target("temp_coreutils",    ""),
-        Target("temp_diffutils",    ""),
-        Target("temp_file",         ""),
-        Target("temp_findutils",    ""),
-        Target("temp_gawk",         ""),
-        Target("temp_grep",         ""),
-        Target("temp_gzip",         ""),
-        Target("temp_make",         ""),
-        Target("temp_patch",        ""),
-        Target("temp_sed",          ""),
-        Target("temp_tar",          ""),
-        Target("temp_xz",           ""),
-        Target("temp_binutils",     ""),
-        Target("temp_gcc",          "") ]:
+        Target("temp_m4",           "usr/local/bin/m4"),
+        Target("temp_ncurses",      "usr/local/lib/libncurses.so"),
+        Target("temp_bash",         "usr/local/bin/bash"),
+        Target("temp_coreutils",    "usr/local/bin/ls"),
+        Target("temp_diffutils",    "usr/local/bin/diff"),
+        Target("temp_file",         "usr/local/bin/file"),
+        Target("temp_findutils",    "usr/local/bin/find"),
+        Target("temp_gawk",         "usr/local/bin/gawk"),
+        Target("temp_grep",         "usr/local/bin/grep"),
+        Target("temp_gzip",         "usr/local/bin/gzip"),
+        Target("temp_make",         "usr/local/bin/make"),
+        Target("temp_patch",        "usr/local/bin/patch"),
+        Target("temp_sed",          "usr/local/bin/sed"),
+        Target("temp_tar",          "usr/local/bin/tar"),
+        Target("temp_xz",           "usr/local/bin/xz"),
+        Target("temp_binutils",     "usr/local/bin/ld"),
+        Target("temp_gcc",          "usr/local/bin/gcc") ]:
         target.build()
 
     mount_vkfs()
@@ -146,10 +147,10 @@ if __name__ == "__main__":
 
     for target in [
         Target("temp_gettext",    ""),
-        Target("temp_bison",      ""),
-        Target("temp_perl",       ""),
-        Target("temp_Python",     ""),
-        Target("temp_texinfo",    ""),
+        Target("temp_bison",      "usr/local/bin/bison"),
+        Target("temp_perl",       "usr/local/bin/perl"),
+        Target("temp_Python",     "usr/local/bin/python3.10"),
+        Target("temp_texinfo",    "usr/local/bin/info"),
         Target("temp_util-linux", "") ]:
         target.build()
 
