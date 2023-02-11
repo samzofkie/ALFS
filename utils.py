@@ -31,47 +31,41 @@ def find_tarball(target_name):
 
 def lfs_dir_snapshot():
     os.chdir(os.environ["LFS"])
-    directories = ["etc", "lib64", "root", "run", "cross-tools", "temp-tools", "usr", "var"]
-    directories = [os.environ["LFS"] + i for i in directories]
-    res = subprocess.run(f"find {' '.join(directories)} -type f", 
-                              shell=True, stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT)
-    return set(str(res.stdout).split('\\n'))
+    directories = ["etc", "lib64", "root", "run", "cross-tools", "usr", "var"]
+    directories = [os.environ["LFS"] + d for d in directories]
+    completed_proc = subprocess.run(["find"] + directories + ["-type", "f"],
+                                    check=True, capture_output=True)
+    return set(str(completed_proc.stdout).split('\\n'))
 
 def vanilla_build(target_name, src_dir_name=None):
     def f():
         nonlocal src_dir_name
         if src_dir_name == None:
             src_dir_name = target_name
-
         tarball_path = find_tarball(src_dir_name)
         src_dir_path = tarball_path.split(".tar")[0]
-
         if "tcl" in src_dir_path:
             src_dir_path = src_dir_path.rsplit("-",1)[0]
-
-        build_script_path = os.environ["LFS"] + \
-                "root/build-scripts/{}.sh".format(target_name.replace('_','-'))
-        log_file_path = os.environ["LFS"] + "logs/" + target_name 
-        tracked_file_record_path = os.environ["LFS"] + \
-                "logs/tracked/" + target_name
-        
+                
         snap1 = lfs_dir_snapshot()
     
-        os.chdir(os.environ["LFS"] + "srcs/") 
-        subprocess.run(["tar", "-xf", tarball_path], check=True)
+        os.chdir(os.environ["LFS"] + "srcs/")
+        subprocess.run(["tar", "-xf", tarball_path], check=True, env=os.environ)
         os.chdir(src_dir_path) 
       
+        build_script_path = f"{os.environ['LFS']}root/build-scripts/{target_name.replace('_','-')}.sh"
+        log_file_path = f"{os.environ['LFS']}logs/{target_name}"
+
         proc = subprocess.run([f"{build_script_path} >{log_file_path} 2>&1"],
-                              shell=True)
-        
-        os.chdir(os.environ["LFS"] + "srcs/")
-        os.system("rm -rf " + src_dir_path)
+                              shell=True, env=os.environ)
+       
+        subprocess.run(["rm", "-rf", src_dir_path], check=True)
 
         if proc.returncode != 0:
             red_print(build_script_path + " failed!")
             return
-         
+        
+        tracked_file_record_path = f"{os.environ['LFS']}logs/tracked/{target_name}"
         with open(tracked_file_record_path, 'w') as f:
             new_files = lfs_dir_snapshot() - snap1 
             f.writelines('\n'.join(new_files))
