@@ -32,7 +32,7 @@ def create_dir_structure():
             os.mkdir(os.environ["LFS"] + directory)
     for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
-            os.system("ln -s usr/{} {}/{}".format(directory, 
+            os.system("ln -s usr/local/{} {}/{}".format(directory, 
                                         os.environ["LFS"], directory))
 
 def copy_build_scripts_into_lfs_dir():

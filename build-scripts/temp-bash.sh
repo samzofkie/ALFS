@@ -5,4 +5,4 @@ set -e
   --without-bash-malloc
 make
 make DESTDIR=$LFS install
-ln -sv bash usr/local/bin/sh
+ln -sv bash $LFS/usr/local/bin/sh
