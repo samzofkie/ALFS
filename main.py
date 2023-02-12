@@ -34,6 +34,7 @@ def create_dir_structure():
         if not os.path.exists(os.environ["LFS"] + directory):
             os.system("ln -s usr/local/{} {}/{}".format(directory, 
                                         os.environ["LFS"], directory))
+    os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
 
 def copy_build_scripts_into_lfs_dir():
     ret = os.system(f"cp -r $HOME/build-scripts/* {os.environ['LFS']}root/build-scripts")
@@ -95,8 +96,10 @@ def mount_vkfs():
             red_print(command.format(os.environ["LFS"]) + " failed!")
 
 def enter_chroot():
+    mount_vkfs()
     os.chdir(os.environ["LFS"])
     os.chroot(os.environ["LFS"])
+    
     for k in os.environ:
         if k != "TERM":
             del os.environ[k]
@@ -104,6 +107,9 @@ def enter_chroot():
     os.environ["PATH"] = "/usr/bin:/usr/sbin:/usr/local/bin"
     os.environ["LFS"] = '/'
     os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib"
+    
+    os.system("install -d -m 1777 /tmp /var/tmp")
+
 
 if __name__ == "__main__":
    
@@ -117,8 +123,10 @@ if __name__ == "__main__":
         Target("cross_gcc",         "cross-tools/bin/x86_64-lfs-linux-gnu-gcc"),
         Target("linux_api_headers", "usr/include/linux", "linux"),
         Target("cross_glibc",       "usr/lib/libc.so"),
-        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc"),
-
+        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc")]:
+        target.build()
+ 
+    for target in [
         Target("temp_m4",           "usr/local/bin/m4"),
         Target("temp_ncurses",      "usr/local/lib/libncurses.so"),
         Target("temp_bash",         "usr/local/bin/bash"),
@@ -138,11 +146,8 @@ if __name__ == "__main__":
         Target("temp_gcc",          "usr/local/bin/gcc") ]:
         target.build()
 
-    mount_vkfs()
-    if not os.path.exists(os.environ["LFS"] + "etc/group"):
-        os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
-    if not os.path.exists("/tmp"):
-        os.system("install -d -m 1777 /tmp /var/tmp")
+    sys.exit(0)
+
     enter_chroot()
 
     for target in [
@@ -153,9 +158,7 @@ if __name__ == "__main__":
         Target("temp_texinfo",    "usr/local/bin/info"),
         Target("temp_util-linux", "") ]:
         target.build()
-
-    sys.exit(0)
-  
+ 
     for target in [
         Target("man-pages",         "/usr/share/man/man7/man.7"),
         Target("iana-etc",          "/etc/services"),
