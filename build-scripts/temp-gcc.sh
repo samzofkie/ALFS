@@ -26,7 +26,7 @@ $SRC_DIR/configure --build=$(../config.guess) \
   --enable-languages=c,c++
 make
 make DESTDIR=$LFS install
-ln -sv gcc usr/local/bin/cc
+ln -sv gcc $LFS/usr/local/bin/cc
 
 cd $LFS/srcs
 rm -rf gcc-build
