@@ -60,15 +60,15 @@ def vanilla_build(target_name, src_dir_name=None):
                               shell=True, env=os.environ)
        
         subprocess.run(["rm", "-rf", src_dir_path], check=True)
-
-        if proc.returncode != 0:
-            red_print(build_script_path + " failed!")
-            return
-        
+ 
         tracked_file_record_path = f"{os.environ['LFS']}logs/tracked/{target_name}"
         with open(tracked_file_record_path, 'w') as f:
             new_files = lfs_dir_snapshot() - snap1 
             f.writelines('\n'.join(new_files))
-    
+   
+        if proc.returncode != 0:
+            red_print(build_script_path + " failed!")
+
+
     f.__name__ = "build_" + target_name
     return f
