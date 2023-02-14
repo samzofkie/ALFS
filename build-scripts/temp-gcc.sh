@@ -12,7 +12,7 @@ $SRC_DIR/configure --build=$(../config.guess) \
   --host=$LFS_TGT \
   --target=$LFS_TGT \
   LDFLAGS_FOR_TARGET=-L$PWD/$LFS_TGT/libgcc \
-  --prefix=/usr/local \
+  --prefix=/usr \
   --with-build-sysroot=$LFS \
   --enable-initfini-array \
   --disable-nls \
@@ -26,7 +26,7 @@ $SRC_DIR/configure --build=$(../config.guess) \
   --enable-languages=c,c++
 make
 make DESTDIR=$LFS install
-ln -sv gcc $LFS/usr/local/bin/cc
+ln -sv gcc $LFS/usr/bin/cc
 
 cd $LFS/srcs
 rm -rf gcc-build

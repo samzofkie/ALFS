@@ -10,10 +10,10 @@ pushd build
   make -C progs tic
 popd
 
-./configure --prefix=/usr/local \
+./configure --prefix=/usr \
   --host=$LFS_TGT \
   --build=$(./config.guess) \
-  --mandir=/usr/local/share/man \
+  --mandir=/usr/share/man \
   --with-manpage-format=normal \
   --with-shared \
   --without-normal \
@@ -25,4 +25,4 @@ popd
 make
 make DESTDIR=$LFS TIC_PATH=$(pwd)/build/progs/tic install
 
-echo "INPUT(-lncursesw)" > $LFS/usr/local/lib/libncurses.so
+echo "INPUT(-lncursesw)" > $LFS/usr/lib/libncurses.so

@@ -34,7 +34,8 @@ def lfs_dir_snapshot():
     directories = ["etc", "lib64", "root", "run", "cross-tools", "usr", "var"]
     directories = [os.environ["LFS"] + d for d in directories]
     completed_proc = subprocess.run(["find"] + directories + ["-type", "f"],
-                                    check=True, capture_output=True)
+                                    check=True, capture_output=True,
+                                    env=os.environ)
     return set(str(completed_proc.stdout).split('\\n'))
 
 def vanilla_build(target_name, src_dir_name=None):

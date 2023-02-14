@@ -4,7 +4,6 @@ import os
 import urllib.request
 import sys
 import subprocess
-import signal
 
 from utils import vanilla_build, red_print
 
@@ -32,7 +31,7 @@ def create_dir_structure():
             os.mkdir(os.environ["LFS"] + directory)
     for directory in ["bin", "lib", "sbin"]:
         if not os.path.exists(os.environ["LFS"] + directory):
-            os.system("ln -s usr/local/{} {}/{}".format(directory, 
+            os.system("ln -s usr/{} {}{}".format(directory, 
                                         os.environ["LFS"], directory))
     os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
 
@@ -98,8 +97,7 @@ def mount_vkfs():
 def enter_chroot():
     mount_vkfs()
     os.chdir(os.environ["LFS"])
-    os.chroot(os.environ["LFS"])
-    
+    os.chroot(os.environ["LFS"]) 
     for k in os.environ:
         if k != "TERM":
             del os.environ[k]
@@ -107,7 +105,6 @@ def enter_chroot():
     os.environ["PATH"] = "/usr/bin:/usr/sbin:/usr/local/bin"
     os.environ["LFS"] = '/'
     os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib"
-    
     os.system("install -d -m 1777 /tmp /var/tmp")
 
 
@@ -123,41 +120,41 @@ if __name__ == "__main__":
         Target("cross_gcc",         "cross-tools/bin/x86_64-lfs-linux-gnu-gcc"),
         Target("linux_api_headers", "usr/include/linux", "linux"),
         Target("cross_glibc",       "usr/lib/libc.so"),
-        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc")]:
+        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc") ]:
         target.build()
  
     for target in [
-        Target("temp_m4",           "usr/local/bin/m4"),
-        Target("temp_ncurses",      "usr/local/lib/libncurses.so"),
-        Target("temp_bash",         "usr/local/bin/bash"),
-        Target("temp_coreutils",    "usr/local/bin/ls"),
-        Target("temp_diffutils",    "usr/local/bin/diff"),
-        Target("temp_file",         "usr/local/bin/file"),
-        Target("temp_findutils",    "usr/local/bin/find"),
-        Target("temp_gawk",         "usr/local/bin/gawk"),
-        Target("temp_grep",         "usr/local/bin/grep"),
-        Target("temp_gzip",         "usr/local/bin/gzip"),
-        Target("temp_make",         "usr/local/bin/make"),
-        Target("temp_patch",        "usr/local/bin/patch"),
-        Target("temp_sed",          "usr/local/bin/sed"),
-        Target("temp_tar",          "usr/local/bin/tar"),
-        Target("temp_xz",           "usr/local/bin/xz"),
-        Target("temp_binutils",     "usr/local/bin/ld"),
-        Target("temp_gcc",          "usr/local/bin/gcc") ]:
+        Target("temp_m4",           "usr/bin/m4"),
+        Target("temp_ncurses",      "usr/lib/libncurses.so"),
+        Target("temp_bash",         "usr/bin/bash"),
+        Target("temp_coreutils",    "usr/bin/env"),
+        Target("temp_diffutils",    "usr/bin/diff"),
+        Target("temp_file",         "usr/bin/file"),
+        Target("temp_findutils",    "usr/bin/find"),
+        Target("temp_gawk",         "usr/bin/gawk"),
+        Target("temp_grep",         "usr/bin/grep"),
+        Target("temp_gzip",         "usr/bin/gzip"),
+        Target("temp_make",         "usr/bin/make"),
+        Target("temp_patch",        "usr/bin/patch"),
+        Target("temp_sed",          "usr/bin/sed"),
+        Target("temp_tar",          "usr/bin/tar"),
+        Target("temp_xz",           "usr/bin/xz"),
+        Target("temp_binutils",     "usr/bin/ld"),
+        Target("temp_gcc",          "usr/bin/gcc") ]:
+        target.build()
+
+    enter_chroot()
+ 
+    for target in [
+        Target("temp_gettext",    ""),
+        Target("temp_bison",      ""),
+        Target("temp_perl",       ""),
+        Target("temp_Python",     ""),
+        Target("temp_texinfo",    ""),
+        Target("temp_util-linux", "") ]:
         target.build()
 
     sys.exit(0)
-
-    enter_chroot()
-
-    for target in [
-        Target("temp_gettext",    ""),
-        Target("temp_bison",      "usr/local/bin/bison"),
-        Target("temp_perl",       "usr/local/bin/perl"),
-        Target("temp_Python",     "usr/local/bin/python3.10"),
-        Target("temp_texinfo",    "usr/local/bin/info"),
-        Target("temp_util-linux", "") ]:
-        target.build()
  
     for target in [
         Target("man-pages",         "/usr/share/man/man7/man.7"),
