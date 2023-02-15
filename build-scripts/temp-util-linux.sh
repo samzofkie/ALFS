@@ -1,9 +1,9 @@
 set -e
 mkdir -pv /var/lib/hwclock
 ./configure ADJTIME_PATH=/var/lib/hwclock/adjtime \
-  --prefix=/usr/local
-  --libdir=/usr/local/lib \
-  --docdir=/usr/local/share/doc/util-linux-2.38.1 \
+  --prefix=/usr
+  --libdir=/usr/lib \
+  --docdir=/usr/share/doc/util-linux-2.38.1 \
   --disable-chfn-chsh \
   --disable-login \
   --disable-nologin \
