@@ -1,4 +1,4 @@
 set -e
-./configure --prefix=/usr/local
+./configure --prefix=/usr
 make
 make install

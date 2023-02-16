@@ -1,5 +1,5 @@
 set -e
-./configure --prefix=/usr/local \
+./configure --prefix=/usr \
   --enable-shared \
   --without-ensurepip
 make

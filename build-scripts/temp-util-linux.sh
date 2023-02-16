@@ -1,7 +1,6 @@
 set -e
 mkdir -pv /var/lib/hwclock
 ./configure ADJTIME_PATH=/var/lib/hwclock/adjtime \
-  --prefix=/usr
   --libdir=/usr/lib \
   --docdir=/usr/share/doc/util-linux-2.38.1 \
   --disable-chfn-chsh \
