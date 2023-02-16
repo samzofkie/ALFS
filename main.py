@@ -146,87 +146,89 @@ if __name__ == "__main__":
     enter_chroot()
  
     for target in [
-        Target("temp_gettext",    ""),
-        Target("temp_bison",      ""),
-        Target("temp_perl",       ""),
-        Target("temp_Python",     ""),
-        Target("temp_texinfo",    ""),
-        Target("temp_util-linux", "") ]:
+        Target("temp_gettext",    "usr/bin/xgettext"),
+        Target("temp_bison",      "usr/bin/bison"),
+        Target("temp_perl",       "usr/bin/perl"),
+        Target("temp_Python",     "usr/bin/python3.10"),
+        Target("temp_texinfo",    "usr/bin/info"),
+        Target("temp_util-linux", "usr/bin/dmesg") ]:
         target.build()
-
-    sys.exit(0)
- 
+    
+    # For the moment, the targets with only a '#' by them mark
+    # a package that built just fine but that there are no new files
+    # for because all the newly built files replace temp tools built
+    # by the cross compiler.
     for target in [
-        Target("man-pages",         "/usr/share/man/man7/man.7"),
-        Target("iana-etc",          "/etc/services"),
-        Target("glibc",             ""),
-        Target("zlib",              "/usr/lib/libz.so"),
-        Target("bzip2",             "/usr/bin/bzip2"),
-        Target("xz",                "/usr/lib/liblzma.la"),
-        Target("zstd",              "/usr/bin/zstd"),
-        Target("file",              "/usr/lib/libmagic.la"),
-        Target("readline",          "/usr/lib/libreadline.so"),
-        Target("m4",                ""),
-        Target("bc",                "/usr/bin/bc"),
-        Target("flex",              "/usr/bin/flex"),
-        Target("tcl",               "/usr/lib/libtcl8.6.so"),
-        Target("expect",            "/usr/bin/expect"),
-        Target("dejagnu",           "/usr/bin/dejagnu"),
+        Target("man-pages",         "usr/share/man/man1"),
+        Target("iana-etc",          "etc/protocols"),
+        Target("glibc",             "etc/ld.so.conf"), #experimental
+        Target("zlib",              "usr/libz.so"),
+        Target("bzip2",             "usr/bin/bzip2"),
+        Target("xz",                "usr/lib/lzma.so"),
+        Target("zstd",              "usr/bin/zstd"),
+        Target("file",              "usr/lib/libmagic.la"),
+        Target("readline",          "usr/lib/libreadline.so"),
+        Target("m4",                "usr/bin/bc"), #
+        Target("bc",                "usr/bin/bc"),
+        Target("flex",              "usr/bin/flex"),
+        Target("tcl",               "usr/bin/tclsh8.6"),
+        Target("expect",            "usr/bin/expect"),
+        Target("dejagnu",           "usr/bin/dejagnu"),
         Target("binutils",          ""),
-        Target("gmp",               "/usr/lib/libgmp.so"),
-        Target("mpfr",              "/usr/lib/libmpfr.so"),
-        Target("mpc",               "/usr/lib/libmpc.so"),
-        Target("attr",              "/usr/bin/attr"),
-        Target("acl",               "/usr/lib/libacl.so"),
-        Target("libcap",            "/usr/lib/libcap.so"),
-        Target("shadow",            "/usr/bin/passwd"),
-        Target("gcc",               "/usr/bin/x86_64-pc-linux-gnu-gcc"),
-        Target("pkg-config",        "/usr/bin/pkg-config"),
-        Target("sed",               "/usr/bin/pkg-config"),
-        Target("psmisc",            ""),
+        Target("gmp",               "usr/lib/libgmp.so"),
+        Target("mpfr",              "usr/lib/libmpfr.so"),
+        Target("mpc",               "usr/lib/libmpc.so"),
+        Target("attr",              "usr/bin/attr"),
+        Target("acl",               "usr/bin/libacl.so"),
+        Target("libcap",            "usr/bin/libcap.so"),
+        Target("shadow",            "usr/bin/passwd"),
+        Target("gcc",               "usr/bin/x86_64-pc-linux-gnu-gcc"),
+        Target("pkg-config",        "usr/bin/pkg-config"),
+        Target("sed",               ""), #
+        Target("psmisc",            "usr/bin/pstree"),
         Target("gettext",           ""),
-        Target("bison",             ""),
-        Target("grep",              ""),
-        Target("bash",              ""),
+        Target("bison",             ""), #
+        Target("grep",              ""), #
+        Target("bash",              ""), #
         Target("libtool",           ""),
-        Target("gdbm",              "/usr/lib/gdbm.so"),
-        Target("gperf",             "/usr/bin/gperf"),
-        Target("expat",             "/usr/lib/expat.so"),
-        Target("inetutils",         "/usr/bin/ping"),
-        Target("less",              "/usr/bin/less"),
+        Target("gdbm",              "usr/lib/libgdbm.so"),
+        Target("gperf",             "usr/bin/gperf"),
+        Target("expat",             "usr/bin/libexpat.so"),
+        Target("inetutils",         "usr/bin/ping"),
+        Target("less",              "usr/bin/less"),
         Target("perl",              ""),
-        Target("XML-Parser",        ""),
-        Target("intltool",          ""),
-        Target("autoconf",          ""),
-        Target("automake",          ""),
-        Target("openssl",           ""),
-        Target("kmod",              ""),
-        Target("elfutils",          ""),
-        Target("libffi",            ""),
-        Target("Python",            ""),
-        Target("ninja",             ""),
+        Target("XML-Parser",        ""), #?
+        Target("intltool",          "usr/bin/intltoolize"),
+        Target("autoconf",          "usr/bin/autoconf"),
+        Target("automake",          "usr/bin/automake"),
+        Target("openssl",           "usr/bin/libssl.so"),
+        Target("kmod",              "usr/lib/libkmod.so"),
+        Target("elfutils",          "usr/lib/libelf.so"),
+        Target("libffi",            "usr/lib/libffi.so"),
+        Target("Python",            "usr/bin/pip3"),
+        Target("ninja",             "usr/bin/ninja"),
         Target("coreutils",         ""),
-        Target("check",             ""),
-        Target("diffutils",         ""),
+        Target("check",             "usr/lib/libcheck.so"),
+        Target("diffutils",         ""), #
         Target("gawk",              ""),
         Target("findutils",         ""),
-        Target("groff",             ""),
-        Target("grub",              ""),
-        Target("gzip",              ""),
-        Target("iproute",           ""),
-        Target("kbd",               ""),
-        Target("libpipeline",       ""),
-        Target("make",              ""),
-        Target("patch",             ""),
+        Target("groff",             "usr/bin/groff"),
+        Target("grub",              "usr/bin/grub-mkimage"),
+        Target("gzip",              ""), #
+        Target("iproute",           "usr/sbin/ip"),
+        Target("kbd",               "usr/bin/kbdinfo"),
+        Target("libpipeline",       "usr/lib/libpipeline.so"),
+        Target("make",              ""), #
+        Target("patch",             ""), #
         Target("tar",               ""),
         Target("texinfo",           ""),
-        Target("vim",               ""),
+        Target("vim",               "vim"),
         Target("eudev",             ""),
-        Target("man-db",            ""),
-        Target("procps-ng",         ""),
-        Target("util-linux",        ""),
-        Target("e2fsprogs",         ""),
-        Target("sysklogd",          ""),
-        Target("sysvinit",          "")
+        Target("man-db",            "usr/bin/man"),
+        Target("procps-ng",         "usr/bin/ps"),
+        Target("util-linux",        "usr/sbin/mkfs.cramfs"), #
+        Target("e2fsprogs",         "usr/sbin/mkfs.ext4"),
+        Target("sysklogd",          "usr/sbin/syslogd"),
+        Target("sysvinit",          "usr/sbin/init")
         ]:
         target.build()
