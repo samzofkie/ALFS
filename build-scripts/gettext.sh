@@ -1,7 +1,7 @@
 set -e
-./configure --prefix=/usr
-  --disable-static
-  --docdir=/usr/share/doc/gettext-0.21
+./configure --prefix=/usr \
+  --disable-static \
+  --docdir=/usr/share/doc/gettext-0.21 \
 make
 make check
 make install
