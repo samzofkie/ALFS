@@ -161,10 +161,10 @@ if __name__ == "__main__":
     for target in [
         Target("man-pages",         "usr/share/man/man1"),
         Target("iana-etc",          "etc/protocols"),
-        Target("glibc",             "etc/ld.so.conf"), #experimental
-        Target("zlib",              "usr/libz.so"),
+        Target("glibc",             "etc/ld.so.conf"), #
+        Target("zlib",              "usr/lib/libz.so"),
         Target("bzip2",             "usr/bin/bzip2"),
-        Target("xz",                "usr/lib/lzma.so"),
+        Target("xz",                "usr/lib/liblzma.so"),
         Target("zstd",              "usr/bin/zstd"),
         Target("file",              "usr/lib/libmagic.la"),
         Target("readline",          "usr/lib/libreadline.so"),
@@ -179,51 +179,51 @@ if __name__ == "__main__":
         Target("mpfr",              "usr/lib/libmpfr.so"),
         Target("mpc",               "usr/lib/libmpc.so"),
         Target("attr",              "usr/bin/attr"),
-        Target("acl",               "usr/bin/libacl.so"),
-        Target("libcap",            "usr/bin/libcap.so"),
+        Target("acl",               "usr/lib/libacl.so"),
+        Target("libcap",            "usr/lib/libcap.so"),
         Target("shadow",            "usr/bin/passwd"),
         Target("gcc",               "usr/bin/x86_64-pc-linux-gnu-gcc"),
         Target("pkg-config",        "usr/bin/pkg-config"),
-        Target("sed",               ""), #
+        Target("sed",               "usr/bin/pstree"), #
         Target("psmisc",            "usr/bin/pstree"),
-        Target("gettext",           ""),
-        Target("bison",             ""), #
-        Target("grep",              ""), #
-        Target("bash",              ""), #
-        Target("libtool",           ""),
+        Target("gettext",           ""), # failed
+        Target("bison",             "usr/bin/ping"), #
+        Target("grep",              "usr/bin/ping"), #
+        Target("bash",              "usr/bin/ping"), #
+        Target("libtool",           "usr/bin/libtool"), # failed
         Target("gdbm",              "usr/lib/libgdbm.so"),
         Target("gperf",             "usr/bin/gperf"),
-        Target("expat",             "usr/bin/libexpat.so"),
+        Target("expat",             "usr/lib/libexpat.so"),
         Target("inetutils",         "usr/bin/ping"),
         Target("less",              "usr/bin/less"),
-        Target("perl",              ""),
+        Target("perl",              ""), # failed
         Target("XML-Parser",        ""), #?
         Target("intltool",          "usr/bin/intltoolize"),
         Target("autoconf",          "usr/bin/autoconf"),
         Target("automake",          "usr/bin/automake"),
-        Target("openssl",           "usr/bin/libssl.so"),
+        Target("openssl",           "usr/lib/libssl.so"),
         Target("kmod",              "usr/lib/libkmod.so"),
         Target("elfutils",          "usr/lib/libelf.so"),
         Target("libffi",            "usr/lib/libffi.so"),
         Target("Python",            "usr/bin/pip3"),
         Target("ninja",             "usr/bin/ninja"),
-        Target("coreutils",         ""),
+        Target("coreutils",         ""), # failed
         Target("check",             "usr/lib/libcheck.so"),
-        Target("diffutils",         ""), #
-        Target("gawk",              ""),
-        Target("findutils",         ""),
+        Target("diffutils",         "usr/bin/groff"), #
+        Target("gawk",              ""), # failed
+        Target("findutils",         ""), # failed but then worked but no tracked
         Target("groff",             "usr/bin/groff"),
         Target("grub",              "usr/bin/grub-mkimage"),
-        Target("gzip",              ""), #
+        Target("gzip",              "usr/sbin/ip"), #
         Target("iproute",           "usr/sbin/ip"),
         Target("kbd",               "usr/bin/kbdinfo"),
         Target("libpipeline",       "usr/lib/libpipeline.so"),
-        Target("make",              ""), #
-        Target("patch",             ""), #
-        Target("tar",               ""),
-        Target("texinfo",           ""),
-        Target("vim",               "vim"),
-        Target("eudev",             ""),
+        Target("make",              "usr/bin/vim"), #
+        Target("patch",             "usr/bin/vim"), #
+        Target("tar",               ""), # failed
+        Target("texinfo",           ""), # failed
+        Target("vim",               "usr/bin/vim"),
+        Target("eudev",             ""), # failed
         Target("man-db",            "usr/bin/man"),
         Target("procps-ng",         "usr/bin/ps"),
         Target("util-linux",        "usr/sbin/mkfs.cramfs"), #
