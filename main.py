@@ -102,9 +102,8 @@ def enter_chroot():
         if k != "TERM":
             del os.environ[k]
     os.environ["HOME"] = "/root"
-    os.environ["PATH"] = "/usr/bin:/usr/sbin:/usr/local/bin"
+    os.environ["PATH"] = "/usr/bin:/usr/sbin"
     os.environ["LFS"] = '/'
-    os.environ["LD_LIBRARY_PATH"] = "/usr/local/lib"
     os.system("install -d -m 1777 /tmp /var/tmp")
 
 
@@ -153,13 +152,14 @@ if __name__ == "__main__":
         Target("temp_texinfo",    "usr/bin/info"),
         Target("temp_util-linux", "usr/bin/dmesg") ]:
         target.build()
+
     
     # For the moment, the targets with only a '#' by them mark
     # a package that built just fine but that there are no new files
-    # for because all the newly built files replace temp tools built
+    # for because all the newly built files replace temp tool built
     # by the cross compiler.
     for target in [
-        Target("man-pages",         "usr/share/man/man1"),
+        Target("man-pages",         "usr/share/man/man1/ldd.1"),
         Target("iana-etc",          "etc/protocols"),
         Target("glibc",             "etc/ld.so.conf"), #
         Target("zlib",              "usr/lib/libz.so"),
@@ -174,7 +174,7 @@ if __name__ == "__main__":
         Target("tcl",               "usr/bin/tclsh8.6"),
         Target("expect",            "usr/bin/expect"),
         Target("dejagnu",           "usr/bin/dejagnu"),
-        Target("binutils",          ""),
+        Target("binutils",          "usr/bin/ld.gold"), # failed
         Target("gmp",               "usr/lib/libgmp.so"),
         Target("mpfr",              "usr/lib/libmpfr.so"),
         Target("mpc",               "usr/lib/libmpc.so"),
@@ -190,14 +190,13 @@ if __name__ == "__main__":
         Target("bison",             "usr/bin/ping"), #
         Target("grep",              "usr/bin/ping"), #
         Target("bash",              "usr/bin/ping"), #
-        Target("libtool",           "usr/bin/libtool"), # failed
         Target("gdbm",              "usr/lib/libgdbm.so"),
         Target("gperf",             "usr/bin/gperf"),
         Target("expat",             "usr/lib/libexpat.so"),
         Target("inetutils",         "usr/bin/ping"),
         Target("less",              "usr/bin/less"),
         Target("perl",              ""), # failed
-        Target("XML-Parser",        ""), #?
+        Target("XML-Parser",        "usr/lib/perl5/5.36/site_perl/XML/Parser"), #?
         Target("intltool",          "usr/bin/intltoolize"),
         Target("autoconf",          "usr/bin/autoconf"),
         Target("automake",          "usr/bin/automake"),
@@ -211,7 +210,7 @@ if __name__ == "__main__":
         Target("check",             "usr/lib/libcheck.so"),
         Target("diffutils",         "usr/bin/groff"), #
         Target("gawk",              ""), # failed
-        Target("findutils",         ""), # failed but then worked but no tracked
+        Target("findutils",         "usr/bin/groff"), #
         Target("groff",             "usr/bin/groff"),
         Target("grub",              "usr/bin/grub-mkimage"),
         Target("gzip",              "usr/sbin/ip"), #
@@ -229,6 +228,8 @@ if __name__ == "__main__":
         Target("util-linux",        "usr/sbin/mkfs.cramfs"), #
         Target("e2fsprogs",         "usr/sbin/mkfs.ext4"),
         Target("sysklogd",          "usr/sbin/syslogd"),
-        Target("sysvinit",          "usr/sbin/init")
+        Target("sysvinit",          "usr/sbin/init"),
+        Target("libtool",           "usr/bin/libtool"), # failed
+        Target("lfs-bootscripts",   "")
         ]:
         target.build()
