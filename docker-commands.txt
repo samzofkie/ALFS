@@ -1,5 +1,0 @@
-docker build -t alfs . 			# from inside alfs directory
-docker run -dit -v $(pwd):/root --cap-add SYS_ADMIN alfs   			# generates container id
-docker exec -it <container-id> bash 	# gives bash shell
-docker kill <container-id>
-docker rm -f <container-id>

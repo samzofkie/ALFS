@@ -1,235 +1,103 @@
 #!/usr/bin/env python3
 
 import os
-import urllib.request
-import sys
+from urllib.request import urlopen
 import subprocess
+import shutil
 
-from utils import vanilla_build, red_print
+def ensure_wget_list():
+    if not os.path.exists("wget-list"):
+        res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
+        with open("wget-list", "w") as f:
+            f.writelines(res.read().decode())
 
-def check_env_vars():
-    try:
-        for var in ["LFS", "LFS_TGT", "HOME"]:
-            os.environ[var]
-    except KeyError:
-        print(f"{var} env var not set. bye!")
-        sys.exit(1)
+def ensure_directory_skeleton():
+    for dir in SYSTEM_DIRS:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+    if not os.path.exists("sources"):
+        os.mkdir("sources")
 
-def create_dir_structure():
-    if not os.path.exists(os.environ["LFS"]):
-        os.mkdir(os.environ["LFS"])
-    os.chdir(os.environ["LFS"])    
-    for directory in [
-            "etc", "lib64", "root", "run", "usr", "var",
-            "usr/bin", "usr/sbin", "usr/lib",
-            "cross-tools", "usr/local",
-            "logs", "logs/tracked",
-            "srcs",
-            "root/build-scripts",
-            "dev", "proc", "sys", "tmp"]: 
-        if not os.path.exists(os.environ["LFS"] + directory):
-            os.mkdir(os.environ["LFS"] + directory)
-    for directory in ["bin", "lib", "sbin"]:
-        if not os.path.exists(os.environ["LFS"] + directory):
-            os.system("ln -s usr/{} {}{}".format(directory, 
-                                        os.environ["LFS"], directory))
-    os.system(f"cp {os.environ['HOME']}/sys_files/* {os.environ['LFS']}etc/")
+def ensure_tarballs_downloaded():
+    with open("wget-list", "r") as f:
+        tarball_urls = [line.split("\n")[0] for line in f.readlines()]
 
-def copy_build_scripts_into_lfs_dir():
-    ret = os.system(f"cp -r $HOME/build-scripts/* {os.environ['LFS']}root/build-scripts")
-    if ret != 0:
-        red_print("copying build-scripts failed!")
-     
-def read_tarball_urls():
-    os.chdir(os.environ["HOME"])
-    with open("tarball_urls",'r') as f:
-        urls = f.readlines()
-    urls = [url.strip('\n') for url in urls]
-    return [url for url in urls if url != '']
+    for url in tarball_urls:
+        tarball_name = url.split("/")[-1]
+        if not os.path.exists("sources/" + tarball_name): 
+            print("downloading " + tarball_name + "...")
+            res = urlopen(url)
+            with open("sources/" + tarball_name, "wb") as f:
+                f.write(res.read())
 
-def download_tarballs():
-    urls = read_tarball_urls()
-    os.chdir(os.environ["LFS"] + "srcs")
-    missing = []
-    for url in urls:
-        package_name = url.split("/")[-1]
-        dest = os.environ["LFS"] + "srcs/" + package_name
-        if package_name in os.listdir():
-            continue
-        print("downloading {}...".format(package_name))
-        try:
-            urllib.request.urlretrieve(url, dest)
-        except:
-            red_print("failed to download {}!".format(package_name))
-            missing.append(package_name)
-            continue
-    if missing != []:
-        red_print("missing " + ' '.join(missing) + '!')
+class TarballNotFoundError(Exception):
+    pass
 
-class Target:
-    def __init__(self, name, binary, alt_src_dir_name=None):
-        self.name = name
-        self.binary = os.environ["LFS"] + binary
-        self.build_func = vanilla_build(name, alt_src_dir_name)
-        
-    def build(self): 
-        if not os.path.exists(self.binary) or self.binary == os.environ["LFS"]:
-            print(f"building {self.name.replace('_',' ')}...")
-            self.build_func()
+def get_tarball_name(package_name):
+    tarballs = os.listdir("sources")
+    res = [tarball for tarball in tarballs if package_name in tarball]
+    res = [tarball for tarball in res if ".patch" not in tarball]
+    if len(res) < 1:
+        raise TarballNotFoundError("No results from search term \"" +
+                                   package_name + "\"")
+    elif len(res) > 1:
+        raise TarballNotFoundError("Too many results from search term \"" +
+                                   package_name + "\": " + str(res))
+    return res[0]
 
-# Mount virtual kernel filesystems
-def mount_vkfs():
-    mount_info = subprocess.run("mount", stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-    mount_info = str(mount_info)[2:].split('\\n')
-    mount_info = [line for line in mount_info 
-                  if os.environ["LFS"] in line]
-    if mount_info != []:
-        return
-    for command in [ "mount -v --bind /dev {}dev",
-                     "mount -v --bind /dev/pts {}dev/pts",
-                     "mount -vt proc proc {}proc",
-                     "mount -vt sysfs sysfs {}sys",
-                     "mount -vt tmpfs tmpfs {}run" ]:
-        if os.system(command.format(os.environ["LFS"])) != 0:
-            red_print(command.format(os.environ["LFS"]) + " failed!")
+def system_snapshot():
+    dirs = SYSTEM_DIRS.copy()
+    all_files = set()
+    while dirs:
+        curr = dirs.pop()
+        for file in os.listdir(curr):
+            full_path = curr + "/" + file
+            if os.path.isdir(full_path):
+                dirs.append(full_path)
+            else:
+                all_files.add(full_path)
+    return all_files
 
-def enter_chroot():
-    mount_vkfs()
-    os.chdir(os.environ["LFS"])
-    os.chroot(os.environ["LFS"]) 
-    for k in os.environ:
-        if k != "TERM":
-            del os.environ[k]
-    os.environ["HOME"] = "/root"
-    os.environ["PATH"] = "/usr/bin:/usr/sbin"
-    os.environ["LFS"] = '/'
-    os.system("install -d -m 1777 /tmp /var/tmp")
+def build_cross_binutils():
+    # check if package has been built yet
 
-
-if __name__ == "__main__":
-   
-    check_env_vars()
-    create_dir_structure() 
-    copy_build_scripts_into_lfs_dir()
-    download_tarballs()
-
-    for target in [
-        Target("cross_binutils",    "cross-tools/bin/ld"),
-        Target("cross_gcc",         "cross-tools/bin/x86_64-lfs-linux-gnu-gcc"),
-        Target("linux_api_headers", "usr/include/linux", "linux"),
-        Target("cross_glibc",       "usr/lib/libc.so"),
-        Target("cross_libstdcpp",   "usr/lib/libstdc++.so", "gcc") ]:
-        target.build()
- 
-    for target in [
-        Target("temp_m4",           "usr/bin/m4"),
-        Target("temp_ncurses",      "usr/lib/libncurses.so"),
-        Target("temp_bash",         "usr/bin/bash"),
-        Target("temp_coreutils",    "usr/bin/env"),
-        Target("temp_diffutils",    "usr/bin/diff"),
-        Target("temp_file",         "usr/bin/file"),
-        Target("temp_findutils",    "usr/bin/find"),
-        Target("temp_gawk",         "usr/bin/gawk"),
-        Target("temp_grep",         "usr/bin/grep"),
-        Target("temp_gzip",         "usr/bin/gzip"),
-        Target("temp_make",         "usr/bin/make"),
-        Target("temp_patch",        "usr/bin/patch"),
-        Target("temp_sed",          "usr/bin/sed"),
-        Target("temp_tar",          "usr/bin/tar"),
-        Target("temp_xz",           "usr/bin/xz"),
-        Target("temp_binutils",     "usr/bin/ld"),
-        Target("temp_gcc",          "usr/bin/gcc") ]:
-        target.build()
-
-    enter_chroot()
- 
-    for target in [
-        Target("temp_gettext",    "usr/bin/xgettext"),
-        Target("temp_bison",      "usr/bin/bison"),
-        Target("temp_perl",       "usr/bin/perl"),
-        Target("temp_Python",     "usr/bin/python3.10"),
-        Target("temp_texinfo",    "usr/bin/info"),
-        Target("temp_util-linux", "usr/bin/dmesg") ]:
-        target.build()
-
+    # unpack tar and enter source dir
+    tarball_name = get_tarball_name("binutils")
+    package_dir_name = tarball_name.split(".tar")[0] 
+    if not os.path.exists(package_dir_name):
+        subprocess.run(("tar -xvf sources/" + tarball_name).split(" "))
+    os.chdir(package_dir_name)
     
-    # For the moment, the targets with only a '#' by them mark
-    # a package that built just fine but that there are no new files
-    # for because all the newly built files replace temp tool built
-    # by the cross compiler.
-    for target in [
-        Target("man-pages",         "usr/share/man/man1/ldd.1"),
-        Target("iana-etc",          "etc/protocols"),
-        Target("glibc",             "etc/ld.so.conf"), #
-        Target("zlib",              "usr/lib/libz.so"),
-        Target("bzip2",             "usr/bin/bzip2"),
-        Target("xz",                "usr/lib/liblzma.so"),
-        Target("zstd",              "usr/bin/zstd"),
-        Target("file",              "usr/lib/libmagic.la"),
-        Target("readline",          "usr/lib/libreadline.so"),
-        Target("m4",                "usr/bin/bc"), #
-        Target("bc",                "usr/bin/bc"),
-        Target("flex",              "usr/bin/flex"),
-        Target("tcl",               "usr/bin/tclsh8.6"),
-        Target("expect",            "usr/bin/expect"),
-        Target("dejagnu",           "usr/bin/dejagnu"),
-        Target("binutils",          "usr/bin/ld.gold"), # failed
-        Target("gmp",               "usr/lib/libgmp.so"),
-        Target("mpfr",              "usr/lib/libmpfr.so"),
-        Target("mpc",               "usr/lib/libmpc.so"),
-        Target("attr",              "usr/bin/attr"),
-        Target("acl",               "usr/lib/libacl.so"),
-        Target("libcap",            "usr/lib/libcap.so"),
-        Target("shadow",            "usr/bin/passwd"),
-        Target("gcc",               "usr/bin/x86_64-pc-linux-gnu-gcc"),
-        Target("pkg-config",        "usr/bin/pkg-config"),
-        Target("sed",               "usr/bin/pstree"), #
-        Target("psmisc",            "usr/bin/pstree"),
-        Target("gettext",           ""), # failed
-        Target("bison",             "usr/bin/ping"), #
-        Target("grep",              "usr/bin/ping"), #
-        Target("bash",              "usr/bin/ping"), #
-        Target("gdbm",              "usr/lib/libgdbm.so"),
-        Target("gperf",             "usr/bin/gperf"),
-        Target("expat",             "usr/lib/libexpat.so"),
-        Target("inetutils",         "usr/bin/ping"),
-        Target("less",              "usr/bin/less"),
-        Target("perl",              ""), # failed
-        Target("XML-Parser",        "usr/lib/perl5/5.36/site_perl/XML/Parser"), #?
-        Target("intltool",          "usr/bin/intltoolize"),
-        Target("autoconf",          "usr/bin/autoconf"),
-        Target("automake",          "usr/bin/automake"),
-        Target("openssl",           "usr/lib/libssl.so"),
-        Target("kmod",              "usr/lib/libkmod.so"),
-        Target("elfutils",          "usr/lib/libelf.so"),
-        Target("libffi",            "usr/lib/libffi.so"),
-        Target("Python",            "usr/bin/pip3"),
-        Target("ninja",             "usr/bin/ninja"),
-        Target("coreutils",         ""), # failed
-        Target("check",             "usr/lib/libcheck.so"),
-        Target("diffutils",         "usr/bin/groff"), #
-        Target("gawk",              ""), # failed
-        Target("findutils",         "usr/bin/groff"), #
-        Target("groff",             "usr/bin/groff"),
-        Target("grub",              "usr/bin/grub-mkimage"),
-        Target("gzip",              "usr/sbin/ip"), #
-        Target("iproute",           "usr/sbin/ip"),
-        Target("kbd",               "usr/bin/kbdinfo"),
-        Target("libpipeline",       "usr/lib/libpipeline.so"),
-        Target("make",              "usr/bin/vim"), #
-        Target("patch",             "usr/bin/vim"), #
-        Target("tar",               ""), # failed
-        Target("texinfo",           ""), # failed
-        Target("vim",               "usr/bin/vim"),
-        Target("eudev",             ""), # failed
-        Target("man-db",            "usr/bin/man"),
-        Target("procps-ng",         "usr/bin/ps"),
-        Target("util-linux",        "usr/sbin/mkfs.cramfs"), #
-        Target("e2fsprogs",         "usr/sbin/mkfs.ext4"),
-        Target("sysklogd",          "usr/sbin/syslogd"),
-        Target("sysvinit",          "usr/sbin/init"),
-        Target("libtool",           "usr/bin/libtool"), # failed
-        Target("lfs-bootscripts",   "")
-        ]:
-        target.build()
+    # make and enter build dir
+    if not os.path.exists("build"):
+        os.mkdir("build")
+    os.chdir("build")
+
+    # run build commands
+    build_commands = [ f"../configure --prefix={ROOT_DIR}/tools " \
+                       f"--with-sysroot={ROOT_DIR} " \
+                       f"--target={LFS_TGT} " \
+                       "--disable-nls " \
+                       "--enable-gprofng=no " \
+                       "--disable-werror",
+                       "make", "make install" ]
+    for command in build_commands:
+        completed = subprocess.run(command.split(" "))
+        if completed.returncode != 0:
+            print(command + " returned " + completed.returncode)
+
+    # return to root and delete source dir
+    os.chdir(ROOT_DIR)
+    shutil.rmtree(package_dir_name)
+
+    # ensure that important files have been placed into fs
+
+LFS_TGT = "x86_64-lfs-linux-gnu"
+SYSTEM_DIRS = ["etc", "var", "usr/bin", "usr/lib", "usr/sbin", "lib64", 
+               "tools"]
+ROOT_DIR = os.getcwd()
+
+ensure_wget_list()
+ensure_directory_skeleton()
+ensure_tarballs_downloaded()
+build_cross_binutils()

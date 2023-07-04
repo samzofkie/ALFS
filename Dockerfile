@@ -1,5 +1,5 @@
-FROM alpine:3.17
-RUN apk add --no-cache bash binutils bison build-base coreutils \
-	diffutils findutils gawk gcc grep gzip m4 make musl-dev \
-	patch perl python3 shadow sed tar texinfo xz
+FROM ubuntu
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y bash binutils bison coreutils diffutils findutils gawk gcc \
+    gzip m4 make patch perl python3 sed tar texinfo xz-utils
 WORKDIR /root
