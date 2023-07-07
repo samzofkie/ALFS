@@ -10,16 +10,14 @@ class Alfs:
     def __init__(self):
         self.root_dir = os.getcwd()
         self.lfs_tgt = "x86_64-lfs-linux-gnu"
-        self.env_vars = { "LC_ALL": "POSIX", 
+        self.env_vars = { 
+             "LC_ALL": "POSIX", 
              "PATH": f"{self.root_dir}/tools/bin:/usr/bin",
-             "CONFIG_SITE": f"{self.root_dir}/usr/share/config.site" }
+             "CONFIG_SITE": f"{self.root_dir}/usr/share/config.site" 
+        }
         self.system_dirs = ["etc", "var", "usr/bin", "usr/lib", "usr/sbin", 
                             "lib64", "tools"]
-        self.ensure_wget_list()
-        self.ensure_directory_skeleton()
-        self.ensure_tarballs_downloaded()
-        self.all_files = self.system_snapshot()
-    
+
 
     def ensure_wget_list(self):
         if not os.path.exists("wget-list"):
@@ -62,6 +60,16 @@ class Alfs:
                 res = urlopen(url)
                 with open("sources/" + tarball_name, "wb") as f:
                     f.write(res.read())
+
+
+    def build_system(self):
+        self.ensure_wget_list()
+        self.ensure_directory_skeleton()
+        self.ensure_tarballs_downloaded()
+        self.all_files = self.system_snapshot()
+        self.build_cross_binutils()
+        self.build_cross_gcc()
+        self.build_linux_headers()
 
 
     class TarballNotFoundError(Exception):
@@ -150,12 +158,17 @@ class Alfs:
 
 
     def cross_gcc_after_build(self):
+        os.chdir("..")
         lines = []
         for file in ["gcc/limitx.h", "gcc/glimits.h", "gcc/limity.h"]:
             with open(file, "r") as f:
                 lines += f.readlines()
         completed = subprocess.run(
-            f"dirname {self.lfs_tgt}-gcc -print-libgcc-file-name".split(" "))
+                f"{self.lfs_tgt}-gcc -print-libgcc-file-name".split(" "),
+                capture_output=True, env=self.env_vars)
+        dirname = completed.stdout.decode().rsplit("/",1)[0]
+        with open (dirname + "/install-tools/include/limits.h", "w") as f:
+            f.writelines(lines)
 
 
     def build_cross_gcc(self):
@@ -164,22 +177,42 @@ class Alfs:
         self.create_and_enter_build_dir()
         self.run_build_commands(f"--target={self.lfs_tgt} " \
             f"--prefix={self.root_dir}/tools --with-glibc-version=2.37 " \
-            "--with-sysroot={self.root_dir} --with-newlib " \
+            f"--with-sysroot={self.root_dir} --with-newlib " \
             "--without-headers --enable-default-pie --enable-default-ssp " \
             "--disable-nls --disable-shared --disable-multilib " \
-            "--disable-threads --disable-libatomic --disable-libgomp" \
+            "--disable-threads --disable-libatomic --disable-libgomp " \
             "--disable-libquadmath --disable-libssp --disable-libvtv " \
             "--disable-libstdcxx --enable-languages=c,c++")
         self.cross_gcc_after_build()
         self.clean_up_build("gcc")
         self.record_new_files("cross-gcc")
+    
+
+    @staticmethod
+    def copy_all_headers(source, destination):
+        if not os.path.exists(destination):
+            os.mkdir(destination)
+        files = [source]
+        while files:
+            curr = files.pop()
+            if os.path.isdir(curr):
+                files += [ curr + "/" + f for f in os.listdir(curr) ]
+                os.mkdir(destination + "/" + curr)
+            elif curr[-2:] == ".h":
+                shutil.copy(curr, destination + "/" + curr)
+
 
     def build_linux_headers(self):
         self.untar_and_enter_source_dir("linux-6")
         self.run("make mrproper")
         self.run("make headers")
+        self.copy_all_headers("usr/include", self.root_dir)
+        self.clean_up_build("linux-6")
+        self.record_new_files("linux-headers")
         
 
-a = Alfs()
-a.build_cross_binutils()
-a.build_cross_gcc()
+# see if i can get away with no pre and post modifications gcc 
+
+if __name__ == '__main__':
+    Alfs().build_system()
+
