@@ -106,10 +106,13 @@ class Alfs:
         subprocess.run(command.split(" "), env=self.env_vars, check=True)
 
 
-    def run_build_commands(self, configure_flags):
+    def run_build_commands(self, configure_flags, destdir):
         build_commands = [ "../configure " + configure_flags, 
-                           "make", 
-                           "make install" ]
+                           "make" ]
+        if destdir:
+            build_commands.append(f"make DESTDIR={destdir} install")
+        else:
+            build_commands.append("make install")
         for command in build_commands:
             self.run(command)
 
@@ -135,7 +138,8 @@ class Alfs:
               before_build=None,
               after_build=None,
               custom_build=None,
-              use_build_dir=True):
+              use_build_dir=True,
+              destdir=""):
         self.untar_and_enter_source_dir(search_term)
         if before_build:
             before_build()
@@ -144,7 +148,7 @@ class Alfs:
         if custom_build:
             custom_build()
         else:
-            self.run_build_commands(configure_flags)
+            self.run_build_commands(configure_flags, destdir)
         if after_build:
             after_build()
         self.clean_up_build(search_term)
@@ -231,10 +235,56 @@ class Alfs:
                    use_build_dir=False)
 
 
+    def cross_glibc_before_build(self):
+        os.symlink("../usr/lib/ld-linux-x86-64.so.2", self.root_dir +
+                   "/lib64/ld-linux-x86-64.so.2")
+        os.symlink("../usr/lib/ld-linux-x86-64.so.2", self.root_dir +
+            "/lib64/ld-lsb-x86-64.so.3")
+        package_name = self.get_tarball_name("glibc").split(".tar")[0]
+        self.run(f"patch -Np1 -i {self.root_dir}/sources/{package_name}-fhs-1.patch")
+        
+        if not os.path.exists("build"):
+            os.mkdir("build")
+        with open("build/configparms", "w") as f:
+            f.write("rootsbindir=/usr/sbin")
+
+
+    def cross_glibc_custom_build(self):
+        completed_process = subprocess.run(["../scripts/config.guess"],
+                                           env=self.env_vars, check=True,
+                                           capture_output=True)
+        config_guess = completed_process.stdout.decode().strip("\n")
+        configure_flags = f"--prefix=/usr --host={self.lfs_tgt} " \
+            f"--build={config_guess} --enable-kernel=3.2 " \
+            f"--with-headers={self.root_dir}/usr/include " \
+            "libc_cv_slibdir=/usr/lib"
+        self.run_build_commands(configure_flags, self.root_dir)
+
+    def cross_glibc_after_build(self):
+        with open("main.c", "w") as f:
+            f.write("int main(){}")
+        self.run(f"{self.lfs_tgt}-gcc -xc main.c")
+        completed_process = subprocess.run("readelf -l a.out".split(" "),
+                                           env=self.env_vars, check=True,
+                                           capture_output=True)
+        assert ( "[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]" 
+                in completed_process.stdout.decode() )
+        self.run(f"{self.root_dir}/tools/libexec/gcc/{self.lfs_tgt}/12.2.0/" \
+                "install-tools/mkheaders") 
+
+
+    def build_cross_glibc(self):
+        self.build("glibc", "", "cross-glibc", 
+                   before_build=self.cross_glibc_before_build,
+                   after_build=self.cross_glibc_after_build,
+                   custom_build=self.cross_glibc_custom_build)
+
+
     def build_system(self):
-        self.build_cross_binutils()
-        self.build_cross_gcc()
-        self.build_linux_headers()
+        #self.build_cross_binutils()
+        #self.build_cross_gcc()
+        #self.build_linux_headers()
+        self.build_cross_glibc()
 
 
 
