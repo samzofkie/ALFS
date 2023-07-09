@@ -260,6 +260,7 @@ class Alfs:
             "libc_cv_slibdir=/usr/lib"
         self.run_build_commands(configure_flags, self.root_dir)
 
+
     def cross_glibc_after_build(self):
         with open("main.c", "w") as f:
             f.write("int main(){}")
@@ -278,14 +279,39 @@ class Alfs:
                    before_build=self.cross_glibc_before_build,
                    after_build=self.cross_glibc_after_build,
                    custom_build=self.cross_glibc_custom_build)
+    
+    
+    def cross_libstdcpp_custom_build(self):
+        completed_process = subprocess.run(["../config.guess"],
+                                           env=self.env_vars, check=True,
+                                           capture_output=True)
+        config_guess = completed_process.stdout.decode().strip("\n")
+        configure_flags = f"--host={self.lfs_tgt} --build={config_guess} " \
+                "--prefix=/usr --disable-multilib --disable-nls " \
+                "--disable-libstdcxx-pch " \
+                f"--with-gxx-include-dir=/tools/{self.lfs_tgt}/include/c++/12.2.0"
+        self.run(f"../libstdc++-v3/configure " + configure_flags)
+        self.run("make")
+        self.run(f"make DESTDIR={self.root_dir} install")
+        for prefix in ["stdc++", "stdc++fs", "supc++"]:
+            archive = self.root_dir + "/usr/lib/lib" + prefix + ".la"
+            if os.path.exists(archive):
+                os.remove(archive)
 
+
+    def build_libstdcpp(self):
+        self.build("gcc", "", "cross-libstdcpp",
+                   custom_build=self.cross_libstdcpp_custom_build)
+
+
+    
 
     def build_system(self):
-        #self.build_cross_binutils()
-        #self.build_cross_gcc()
-        #self.build_linux_headers()
+        self.build_cross_binutils()
+        self.build_cross_gcc()
+        self.build_linux_headers()
         self.build_cross_glibc()
-
+        self.build_libstdcpp()
 
 
 
