@@ -5,14 +5,14 @@ from setup import ROOT_DIR, LFS_TGT, ENV_VARS, HOST_TRIPLET
 from build import build, get_tarball_and_package_names, run
 
 
-def build_cross_binutils():
+def _build_cross_binutils():
     cc = (f"../configure --prefix={ROOT_DIR}/tools "
         f"--with-sysroot={ROOT_DIR} --target={LFS_TGT} "
         "--disable-nls --enable-gprofng=no --disable-werror")
     build("cross-binutils", configure_command = cc)
 
 
-def cross_gcc_before():
+def _cross_gcc_before():
     for dep in ["mpfr", "gmp", "mpc"]:
         tarball_name, package_name = get_tarball_and_package_names(dep)
         run(f"tar -xvf {ROOT_DIR}/sources/{tarball_name}")
@@ -29,7 +29,7 @@ def cross_gcc_before():
         f.writelines(lines)
 
 
-def cross_gcc_after():
+def _cross_gcc_after():
     os.chdir("..")
     lines = []
     for file in ["gcc/limitx.h", "gcc/glimits.h", "gcc/limity.h"]:
@@ -43,7 +43,7 @@ def cross_gcc_after():
         f.writelines(lines)
 
 
-def build_cross_gcc():
+def _build_cross_gcc():
     cc = (f"../configure --target={LFS_TGT} --prefix={ROOT_DIR}/tools "
         f"--with-glibc-version=2.37 --with-sysroot={ROOT_DIR} --with-newlib "
         "--without-headers --enable-default-pie --enable-default-ssp "
@@ -51,11 +51,11 @@ def build_cross_gcc():
         "--disable-libatomic --disable-libgomp --disable-libquadmath "
         "--disable-libssp --disable-libvtv --disable-libstdcxx "
         "--enable-languages=c,c++")
-    build("cross-gcc", before_build = cross_gcc_before, configure_command = cc, 
-          after_build = cross_gcc_after)
+    build("cross-gcc", before_build = _cross_gcc_before, configure_command = cc, 
+          after_build = _cross_gcc_after)
 
 
-def copy_linux_headers():
+def _copy_linux_headers():
     destination = ROOT_DIR
     files = ["usr/include"]
     while files:
@@ -67,18 +67,18 @@ def copy_linux_headers():
             shutil.copy(curr, destination + "/" + curr)
 
 
-def linux_headers_before():
+def _linux_headers_before():
     run("make mrproper")
     run("make headers")
-    copy_linux_headers()
+    _copy_linux_headers()
 
 
-def build_linux_headers():
+def _build_linux_headers():
     build("linux-headers", search_term = "linux-6", 
-          before_build = linux_headers_before, build_dir = False)
+          before_build = _linux_headers_before, build_dir = False)
 
 
-def cross_glibc_before():
+def _cross_glibc_before():
     os.symlink("../usr/lib/ld-linux-x86-64.so.2", ROOT_DIR +
                "/lib64/ld-linux-x86-64.so.2")
     os.symlink("../usr/lib/ld-linux-x86-64.so.2", ROOT_DIR + 
@@ -92,7 +92,7 @@ def cross_glibc_before():
         f.write("rootsbindir=/usr/sbin")
 
 
-def cross_glibc_after():
+def _cross_glibc_after():
     with open("main.c", "w") as f:
         f.write("int main(){}")
     run(f"{LFS_TGT}-gcc -xc main.c")
@@ -104,18 +104,19 @@ def cross_glibc_after():
     run(f"{ROOT_DIR}/tools/libexec/gcc/{LFS_TGT}/12.2.0/install-tools/mkheaders") 
 
 
-def build_cross_glibc():
+def _build_cross_glibc():
     cc = (f"../configure --prefix=/usr --host={LFS_TGT} --build={HOST_TRIPLET} "
         f"--enable-kernel=3.2 --with-headers={ROOT_DIR}/usr/include "
         "libc_cv_slibdir=/usr/lib")
-    build("cross-glibc", before_build = cross_glibc_before, 
-          configure_command = cc, destdir = ROOT_DIR, 
-          after_build = cross_glibc_after)
+    cl_args = {"make install": {"DESTDIR": ROOT_DIR}}
+    build("cross-glibc", before_build = _cross_glibc_before, 
+          configure_command = cc, build_cl_args = cl_args, 
+          after_build = _cross_glibc_after)
 
 
-def cross_libstdcpp_after():
+def _cross_libstdcpp_after():
     for prefix in ["stdc++", "stdc++fs", "supc++"]:
-        archive = self.root_dir + "/usr/lib/lib" + prefix + ".la"
+        archive = ROOT_DIR + "/usr/lib/lib" + prefix + ".la"
         if os.path.exists(archive):
             os.remove(archive)
 
@@ -125,13 +126,14 @@ def build_cross_libstdcpp():
         "--prefix=/usr --disable-multilib --disable-nls "
         "--disable-libstdcxx-pch "
         f"--with-gxx-include-dir=/tools/{LFS_TGT}/include/c++/12.2.0")
+    cl_args = {"make install": {"DESTDIR": ROOT_DIR}}
     build("cross-libstdc++", search_term = "gcc", configure_command = cc,
-          destdir = ROOT_DIR, after_build = cross_libstdcpp_after()) 
+          build_cl_args = cl_args, after_build = _cross_libstdcpp_after())
 
 
 def build_cross_toolchain():
-    build_cross_binutils()
-    build_cross_gcc()
-    build_linux_headers()
-    build_cross_glibc()
-    build_cross_libstdcpp()
+    _build_cross_binutils()
+    _build_cross_gcc()
+    _build_linux_headers()
+    _build_cross_glibc()
+    _build_cross_libstdcpp()

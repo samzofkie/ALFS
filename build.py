@@ -66,17 +66,19 @@ def create_and_enter_build_dir():
     os.chdir("build")
 
 
-def run(command):
-    subprocess.run(command.split(), env=ENV_VARS, check=True)
+def run(command, _env=ENV_VARS):
+    subprocess.run(command.split(), env=_env, check=True)
 
 
-def _run_build_commands(configure_command, destdir):
-    install_command = "make install"
-    if destdir:
-        install_command.replace(" ", f" DESTDIR={destdir} ")
-    build_commands = [configure_command, "make", install_command]
+def _run_build_commands(configure_command, cl_args):
+    build_commands = [configure_command, "make", "make install"]
     for command in build_commands:
-        run(command)
+        _env = ENV_VARS.copy()
+        if command in cl_args:
+            for arg in cl_args[command]:
+                _env[arg] = cl_args[command][arg]
+        print(f"running {command} w env: {_env}")
+        run(command, _env)
 
 
 def _clean_up_build(package_name):
@@ -89,7 +91,8 @@ def build(target_name,
           before_build = None,
           build_dir = True,
           configure_command = "",
-          destdir = "",
+          build_cl_args = {},
+          #destdir = "",
           after_build = None):
     """Compile and install a target from source code.
 
@@ -105,7 +108,7 @@ def build(target_name,
     if build_dir:
         create_and_enter_build_dir()
     if configure_command:
-        _run_build_commands(configure_command, destdir)
+        _run_build_commands(configure_command, build_cl_args)
     if after_build:
         after_build()
     _clean_up_build(package_name)
