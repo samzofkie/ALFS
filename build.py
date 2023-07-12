@@ -92,7 +92,6 @@ def build(target_name,
           build_dir = True,
           configure_command = "",
           build_cl_args = {},
-          #destdir = "",
           after_build = None):
     """Compile and install a target from source code.
 
@@ -114,6 +113,3 @@ def build(target_name,
     _clean_up_build(package_name)
 
     record_new_files(target_name)
-
-    
-

@@ -12,7 +12,7 @@ def _build_cross_binutils():
     build("cross-binutils", configure_command = cc)
 
 
-def _cross_gcc_before():
+def cross_gcc_before():
     for dep in ["mpfr", "gmp", "mpc"]:
         tarball_name, package_name = get_tarball_and_package_names(dep)
         run(f"tar -xvf {ROOT_DIR}/sources/{tarball_name}")
@@ -51,7 +51,7 @@ def _build_cross_gcc():
         "--disable-libatomic --disable-libgomp --disable-libquadmath "
         "--disable-libssp --disable-libvtv --disable-libstdcxx "
         "--enable-languages=c,c++")
-    build("cross-gcc", before_build = _cross_gcc_before, configure_command = cc, 
+    build("cross-gcc", before_build = cross_gcc_before, configure_command = cc, 
           after_build = _cross_gcc_after)
 
 
@@ -121,7 +121,7 @@ def _cross_libstdcpp_after():
             os.remove(archive)
 
 
-def build_cross_libstdcpp():
+def _build_cross_libstdcpp():
     cc = (f"../libstdc++-v3/configure --host={LFS_TGT} --build={HOST_TRIPLET} "
         "--prefix=/usr --disable-multilib --disable-nls "
         "--disable-libstdcxx-pch "
