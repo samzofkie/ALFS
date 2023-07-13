@@ -1,6 +1,6 @@
 import os
 import shutil
-from setup import ROOT_DIR, LFS_TGT, HOST_TRIPLET
+from setup import ROOT_DIR, LFS_TGT, HOST_TRIPLET, ENV_VARS
 from build import build, create_and_enter_build_dir, run, \
         get_tarball_and_package_names
 from cross_toolchain import cross_gcc_before
@@ -92,7 +92,7 @@ def _build_temp_diffutils():
 
 def _temp_file_before():
     create_and_enter_build_dir()
-    run("./configure --disable-bzlib --disable-libseccomp --disable-xzlib"
+    run("../configure --disable-bzlib --disable-libseccomp --disable-xzlib"
         "--disable-zlib")
     run("make")
     os.chdir("..")
@@ -106,8 +106,8 @@ def _build_temp_file():
     cc = f"./configure --prefix=/usr --build={HOST_TRIPLET} --host={LFS_TGT}" 
     _, package_name = get_tarball_and_package_names("file")
     cl_args = DESTDIR.copy()
-    cl_args["make"] = {"FILE_COMPILE":
-                       f"{ROOT_DIR}/{package_name}/build/src/file"}
+    cl_args["make"] = {"PATH":
+                       f"{ROOT_DIR}/{package_name}/build/src:{ENV_VARS['PATH']}"}
     build("temp-file", before_build = _temp_file_before, build_dir = False,
           configure_command = cc, build_cl_args = cl_args, 
           after_build = _temp_file_after)

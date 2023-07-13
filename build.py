@@ -36,7 +36,8 @@ def _clean_target_name(target_name):
 
 def _search_for_tarball(search_term):
     tarballs = os.listdir(f"{ROOT_DIR}/sources")
-    res = [tarball for tarball in tarballs if search_term in tarball]
+    res = [tarball for tarball in tarballs if tarball[:len(search_term)] ==
+           search_term]
     res = [tarball for tarball in res if ".patch" not in tarball]
     if len(res) < 1:
         raise FileNotFoundError("No results from search term \"" +

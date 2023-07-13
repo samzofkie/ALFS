@@ -74,7 +74,7 @@ def _linux_headers_before():
 
 
 def _build_linux_headers():
-    build("linux-headers", search_term = "linux-6", 
+    build("linux-headers", search_term = "linux", 
           before_build = _linux_headers_before, build_dir = False)
 
 
