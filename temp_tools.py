@@ -211,7 +211,7 @@ def _build_temp_binutils():
 
 def _temp_gcc_before():
     cross_gcc_before()
-    for section in ["libgcc", "libstdc++-v/include"]:
+    for section in ["libgcc", "libstdc++-v3/include"]:
         with open(f"{section}/Makefile.in", "r") as f:
             file = f.read()
         file.replace("@thread_header@", "gthr-posix.h")
