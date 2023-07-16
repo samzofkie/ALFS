@@ -4,7 +4,7 @@ from urllib.request import urlopen
 
 LFS_TGT = "x86_64-lfs-linux-gnu"
 HOST_TRIPLET = "x86_64-pc-linux-gnu"
-SYS_DIRS = ["etc", "var", "usr/bin", "usr/lib", "usr/sbin", 
+SYS_DIRS = ["var", "usr/bin", "usr/lib", "usr/sbin", 
                 "lib64", "tools"]
 ROOT_DIR = os.getcwd()
 ENV_VARS = { 
@@ -61,11 +61,13 @@ def _system_snapshot():
                 all_files.add(full_path)
     return all_files
 
+
 _ensure_wget_list()
 _ensure_directory_skeleton()
 _ensure_tarballs_downloaded()
 
 RECORDED_FILES = _system_snapshot() 
+
 
 def record_new_files(filename):
     os.chdir(ROOT_DIR)
@@ -74,6 +76,4 @@ def record_new_files(filename):
     with open("package-records/" + filename, "w") as f:
         f.writelines(sorted([file + "\n" for file in new_files]))
     RECORDED_FILES = RECORDED_FILES.union(new_files)
-
-
 
