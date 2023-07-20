@@ -5,7 +5,7 @@ from collections import OrderedDict
 class Phase:
     def __init__(self, root, file_tracker):
         self.root_dir = root
-        self._file_tracker = file_tracker
+        self.file_tracker = file_tracker
         self.env = os.environ.copy()
         self.targets = OrderedDict()
 
@@ -69,6 +69,8 @@ class Phase:
     def _build_package(
         self, target_name, build_commands, search_term="", build_dir=False
     ):
+        if self.file_tracker.query_record_existence(target_name):
+            return
         if not search_term:
             search_term = self._clean_target_name(target_name)
         tarball_name = self._search_for_tarball(search_term)
@@ -84,7 +86,7 @@ class Phase:
         self._after_build(target_name)
 
         self._clean_up_build(package_name)
-        self._file_tracker.record_new_files(target_name)
+        self.file_tracker.record_new_files(target_name)
 
     def build_phase(self):
         for target, args in self.targets.items():

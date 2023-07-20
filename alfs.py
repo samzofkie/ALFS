@@ -4,6 +4,7 @@ import os
 from urllib.request import urlopen
 from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
+from chroot_temp_tools import ChrootTempToolsBuild
 
 SYS_DIRS = ["var", "usr/bin", "usr/lib", "usr/sbin", "etc", "lib64", "tools"]
 
@@ -70,6 +71,93 @@ class FileTracker:
             f.writelines(sorted([file + "\n" for file in new_files]))
         self.recorded_files = self.recorded_files.union(new_files)
 
+    def query_record_existence(self, target_name):
+        return os.path.exists(f"{self.root_dir}/package-records/{target_name}")
+
+
+def _mount_vkfs(root_dir):
+    """Mount Virtual Kernel Filesystems"""
+    for command in [
+        f"mount -v --bind /dev {root_dir}/dev",
+        f"mount -v --bind /dev/pts {root_dir}/dev/pts",
+        f"mount -vt proc proc {root_dir}/proc",
+        f"mount -vt sysfs sysfs {root_dir}/sys",
+        f"mount -vt tmpfs tmpfs {root_dir}/run",
+    ]:
+        ret = subprocess.run(command.split(), check=True)
+
+
+def _enter_chroot(root_dir):
+    os.chdir(root_dir)
+    os.chroot(root_dir)
+    for var in os.environ:
+        del os.environ[var]
+    os.environ["PATH"] = "/usr/bin:/usr/sbin"
+
+
+def _make_additional_dirs():
+    chroot_dirs = [
+        "dev",
+        "proc",
+        "sys",
+        "run",
+        "boot",
+        "home/tester",
+        "mnt",
+        "opt",
+        "srv",
+        "root",
+        "tmp",
+        "usr/lib/firmware",
+    ]
+    chroot_dirs += ["etc/" + d for d in ["opt", "sysconfig"]]
+    chroot_dirs += ["media/" + d for d in ["floppy", "cdrom"]]
+    chroot_dirs += ["usr/local/" + d for d in ["bin", "lib", "sbin"]]
+    for prefix in ["usr/", "usr/local/"]:
+        chroot_dirs += [prefix + d for d in ["include", "src"]]
+        chroot_dirs += [
+            prefix + "share/" + d
+            for d in [
+                "color",
+                "dict",
+                "doc",
+                "info",
+                "locale",
+                "man",
+                "misc",
+                "terminfo",
+                "zoneinfo",
+            ]
+        ]
+        chroot_dirs += [prefix + "share/man/man" + str(i) for i in range(9)]
+    chroot_dirs += [
+        "var/" + d for d in ["cache", "local", "log", "mail", "opt", "spool", "tmp"]
+    ]
+    chroot_dirs += ["var/lib/" + d for d in ["color", "misc", "locate"]]
+
+    for d in chroot_dirs:
+        if not os.path.exists(d):
+            os.makedirs(d)
+    os.symlink("/run", "/var/run")
+    os.symlink("/run/lock", "/var/lock")
+    subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
+    shutil.chown("/home/tester", user="tester")
+    for file in ["btmp", "lastlog", "faillog", "wtmp"]:
+        with open("/var/log/" + file, "a") as f:
+            pass
+    shutil.chown("/var/log/lastlog", group="utmp")
+    os.chmod(
+        "/var/log/lastlog",
+        stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH,
+    )
+    os.chmod("/var/log/btmp", stat.S_IRUSR | stat.S_IWUSR)
+
+
+def prepare_and_enter_chroot(root_dir):
+    _mount_vkfs(root_dir)
+    _enter_chroot(root_dir)
+    _make_additional_dirs()
+
 
 if __name__ == "__main__":
     setup()
@@ -77,5 +165,7 @@ if __name__ == "__main__":
     ft = FileTracker(base_dir)
     CrossToolchainBuild(base_dir, ft).build_phase()
     TempToolsBuild(base_dir, ft).build_phase()
-    # prepare_and_enter_chroot()
-    # ft.root_dir = "/"
+    prepare_and_enter_chroot(base_dir)
+    base_dit = "/"
+    ft.root_dir = "/"
+    ChrootTempToolsBuild(base_dir, ft).build_phase()

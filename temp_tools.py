@@ -145,7 +145,7 @@ class TempToolsBuild(PreChrootPhase):
     def _temp_file_before(self):
         self._create_and_enter_build_dir()
         self._run(
-            "../configure --disable-bzlib --disable-libseccomp --disable-xzlib"
+            "../configure --disable-bzlib --disable-libseccomp --disable-xzlib "
             "--disable-zlib"
         )
         self._run("make")
