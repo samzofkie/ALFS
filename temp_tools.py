@@ -54,7 +54,7 @@ class TempToolsBuild(PreChrootPhase):
             [
                 prefix_host_build,
                 f"make FILE_COMPILE={self.root_dir}/file-5.44/build/src/file",
-                "make install",
+                f"make DESTDIR={self.root_dir} install",
             ],
         )
         _add(
@@ -90,10 +90,10 @@ class TempToolsBuild(PreChrootPhase):
         }
         self.targets["temp_gcc"] = {
             "build_commands": [
-                "."
-                + prefix_host_build
-                + (
-                    f" LDFLAGS_FOR_TARGET=-L{os.getcwd()}/{self.lfs_triplet}/libgcc "
+                (
+                    f"../configure --build={self.host_triplet} "
+                    f"--host={self.lfs_triplet} --target={self.lfs_triplet} "
+                    f"LDFLAGS_FOR_TARGET=-L{self.root_dir}/gcc-12.2.0/build/{self.lfs_triplet}/libgcc "
                     f"--prefix=/usr --with-build-sysroot={self.root_dir} "
                     "--enable-default-pie --enable-default-ssp --disable-nls "
                     "--disable-multilib --disable-libatomic --disable-libgomp "
@@ -191,5 +191,5 @@ class TempToolsBuild(PreChrootPhase):
             with open(f"{section}/Makefile.in", "w") as f:
                 f.write(file)
 
-    def _temp_gcc_after():
+    def _temp_gcc_after(self):
         os.symlink("gcc", f"{self.root_dir}/usr/bin/cc")
