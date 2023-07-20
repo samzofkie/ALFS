@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os
+import os, subprocess, shutil
 from urllib.request import urlopen
 from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
@@ -133,7 +133,7 @@ def _make_additional_dirs():
     chroot_dirs += [
         "var/" + d for d in ["cache", "local", "log", "mail", "opt", "spool", "tmp"]
     ]
-    chroot_dirs += ["var/lib/" + d for d in ["color", "misc", "locate"]]
+    chroot_dirs += ["var/lib/" + d for d in ["color", "misc", "locate", "hwclock"]]
 
     for d in chroot_dirs:
         if not os.path.exists(d):
@@ -159,6 +159,18 @@ def prepare_and_enter_chroot(root_dir):
     _make_additional_dirs()
 
 
+def clean_temp_system():
+    for d in ["info", "man", "doc"]:
+        shutil.rmtree(f"/usr/share/{d}")
+        os.mkdir(f"/usr/share/{d}")
+    for lib_dir in ["lib", "libexec"]:
+        for full_path, _, files in os.walk(f"/usr/{lib_dir}"):
+            for file in files:
+                if file[-3:] == ".la":
+                    os.remove(f"{full_path}/{file}")
+    shutil.rmtree("/tools")
+
+
 if __name__ == "__main__":
     setup()
     base_dir = os.getcwd()
@@ -169,3 +181,4 @@ if __name__ == "__main__":
     base_dit = "/"
     ft.root_dir = "/"
     ChrootTempToolsBuild(base_dir, ft).build_phase()
+    clean_temp_system()
