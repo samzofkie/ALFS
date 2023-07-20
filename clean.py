@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, os, shutil
+import subprocess, os, shutil, sys
 
 
 def _remove_dirs():
@@ -43,17 +43,20 @@ def _clean_etc():
                 shutil.rmtree(item)
 
 
-def _umount_vkfs():
+def umount_vkfs():
     """Run outside the chroot please!"""
     for d in ["dev/pts", "dev", "proc", "sys", "run"]:
         subprocess.run(f"umount {d}".split(), capture_output=True)
 
 
 def clean():
-    _umount_vkfs()
+    umount_vkfs()
     _remove_dirs()
     _clean_etc()
 
 
 if __name__ == "__main__":
-    clean()
+    if "umount" in sys.argv:
+        umount_vkfs()
+    else:
+        clean()
