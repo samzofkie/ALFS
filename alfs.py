@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os, subprocess, shutil
+import os, subprocess, shutil, time, stat
 from urllib.request import urlopen
 from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
@@ -52,24 +52,30 @@ class FileTracker:
 
     def _system_snapshot(self):
         os.chdir(self.root_dir)
-        dirs = SYS_DIRS.copy()
         all_files = set()
-        while dirs:
-            curr = dirs.pop()
-            for file in os.listdir(curr):
-                full_path = curr + "/" + file
-                if os.path.isdir(full_path):
-                    dirs.append(full_path)
-                else:
-                    all_files.add(full_path)
+        for d in SYS_DIRS:
+            for curr_dir, _, files in os.walk(d):
+                for file in files:
+                    full_path = f"{curr_dir}/{file}"
+                    if os.path.isfile(full_path):
+                        all_files.add(full_path)
         return all_files
 
-    def record_new_files(self, target_name):
-        os.chdir(self.root_dir)
-        new_files = self._system_snapshot() - self.recorded_files
-        with open("package-records/" + target_name, "w") as f:
-            f.writelines(sorted([file + "\n" for file in new_files]))
-        self.recorded_files = self.recorded_files.union(new_files)
+    def _update_recorded_files(self):
+        self.recorded_files = self._system_snapshot()
+
+    def _write_file_list(self, target_name, file_list):
+        with open(f"{self.root_dir}/package-records/{target_name}", "w") as f:
+            f.writelines(sorted([f"{file}\n" for file in file_list]))
+
+    def record_new_files_since(self, start_time, target_name):
+        self._update_recorded_files()
+        new_files = set()
+        for file in self.recorded_files:
+            mtime = time.ctime(os.stat(file).st_mtime)
+            if file_time > start_time:
+                new_files.add(file)
+        self._write_file_list(target_name, new_files)
 
     def query_record_existence(self, target_name):
         return os.path.exists(f"{self.root_dir}/package-records/{target_name}")
@@ -77,6 +83,9 @@ class FileTracker:
 
 def _mount_vkfs(root_dir):
     """Mount Virtual Kernel Filesystems"""
+    for d in ["dev", "proc", "sys", "run"]:
+        if not os.path.exists(f"{root_dir}/{d}"):
+            os.mkdir(f"{root_dir}/{d}")
     for command in [
         f"mount -v --bind /dev {root_dir}/dev",
         f"mount -v --bind /dev/pts {root_dir}/dev/pts",
@@ -97,10 +106,6 @@ def _enter_chroot(root_dir):
 
 def _make_additional_dirs():
     chroot_dirs = [
-        "dev",
-        "proc",
-        "sys",
-        "run",
         "boot",
         "home/tester",
         "mnt",
@@ -138,8 +143,11 @@ def _make_additional_dirs():
     for d in chroot_dirs:
         if not os.path.exists(d):
             os.makedirs(d)
-    os.symlink("/run", "/var/run")
-    os.symlink("/run/lock", "/var/lock")
+
+    if not os.path.exists("/var/run"):
+        os.symlink("/run", "/var/run")
+    if not os.path.exists("/var/lock"):
+        os.symlink("/run/lock", "/var/lock")
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
     shutil.chown("/home/tester", user="tester")
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:

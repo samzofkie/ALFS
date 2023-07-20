@@ -1,4 +1,4 @@
-import os, subprocess, shutil
+import os, subprocess, shutil, time
 from collections import OrderedDict
 
 
@@ -77,6 +77,7 @@ class Phase:
         package_name = self._package_name_from_tarball(tarball_name)
 
         self._untar_and_enter_source_dir(tarball_name)
+        start_time = time.ctime()
 
         self._before_build(target_name)
         if build_dir:
@@ -86,7 +87,7 @@ class Phase:
         self._after_build(target_name)
 
         self._clean_up_build(package_name)
-        self.file_tracker.record_new_files(target_name)
+        self.file_tracker.record_new_files_since(start_time, target_name)
 
     def build_phase(self):
         for target, args in self.targets.items():
