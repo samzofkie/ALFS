@@ -3,17 +3,36 @@ import subprocess, os, shutil
 
 
 def _remove_dirs():
-    package_names = [tarball.split(".tar")[0] for tarball in
-        os.listdir("sources") if ".tar" in tarball]
-    sys_dirs = ["boot", "dev", "home", "lib64", "media", "mnt", "opt", "proc",
-              "root", "run", "srv", "sys", "tmp", "tools", "usr", "var"]
+    package_names = [
+        tarball.split(".tar")[0]
+        for tarball in os.listdir("sources")
+        if ".tar" in tarball
+    ]
+    sys_dirs = [
+        "boot",
+        "dev",
+        "home",
+        "lib64",
+        "media",
+        "mnt",
+        "opt",
+        "proc",
+        "root",
+        "run",
+        "srv",
+        "sys",
+        "tmp",
+        "tools",
+        "usr",
+        "var",
+    ]
     for d in package_names + sys_dirs:
         if os.path.exists(d):
             shutil.rmtree(d)
 
 
 def _clean_etc():
-    """ Run outside chroot please!"""
+    """Run outside chroot please!"""
     contents = os.listdir("etc")
     for item in contents:
         if item not in ["group", "hosts", "passwd"]:
@@ -25,9 +44,9 @@ def _clean_etc():
 
 
 def _umount_vkfs():
-    """ Run outside the chroot please!"""
+    """Run outside the chroot please!"""
     for d in ["dev/pts", "dev", "proc", "sys", "run"]:
-        subprocess.run(f"umount {d}".split())
+        subprocess.run(f"umount {d}".split(), capture_output=True)
 
 
 def clean():
@@ -38,4 +57,3 @@ def clean():
 
 if __name__ == "__main__":
     clean()
-

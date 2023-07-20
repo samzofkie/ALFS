@@ -3,9 +3,10 @@
 import os
 from urllib.request import urlopen
 from cross_toolchain import CrossToolchainBuild
+from temp_tools import TempToolsBuild
 
-SYS_DIRS = ["var", "usr/bin", "usr/lib", "usr/sbin", 
-            "etc", "lib64", "tools"]
+SYS_DIRS = ["var", "usr/bin", "usr/lib", "usr/sbin", "etc", "lib64", "tools"]
+
 
 def _ensure_wget_list():
     if not os.path.exists("wget-list"):
@@ -15,9 +16,9 @@ def _ensure_wget_list():
 
 
 def _ensure_directory_skeleton():
-    for dir in SYS_DIRS:
-        if not os.path.exists(dir):
-            os.makedirs(dir)
+    for d in SYS_DIRS:
+        if not os.path.exists(d):
+            os.makedirs(d)
     extras = ["sources", "package-records"]
     for extra in extras:
         if not os.path.exists(extra):
@@ -30,11 +31,12 @@ def _ensure_tarballs_downloaded():
 
     for url in tarball_urls:
         tarball_name = url.split("/")[-1]
-        if not os.path.exists("sources/" + tarball_name): 
+        if not os.path.exists("sources/" + tarball_name):
             print("downloading " + tarball_name + "...")
             res = urlopen(url)
             with open("sources/" + tarball_name, "wb") as f:
                 f.write(res.read())
+
 
 def setup():
     _ensure_wget_list()
@@ -47,10 +49,9 @@ class FileTracker:
         self.root_dir = root_dir
         self.recorded_files = self._system_snapshot()
 
-
     def _system_snapshot(self):
         os.chdir(self.root_dir)
-        dirs = SYS_DIRS.copy() 
+        dirs = SYS_DIRS.copy()
         all_files = set()
         while dirs:
             curr = dirs.pop()
@@ -61,7 +62,6 @@ class FileTracker:
                 else:
                     all_files.add(full_path)
         return all_files
-
 
     def record_new_files(self, target_name):
         os.chdir(self.root_dir)
@@ -76,19 +76,6 @@ if __name__ == "__main__":
     base_dir = os.getcwd()
     ft = FileTracker(base_dir)
     CrossToolchainBuild(base_dir, ft).build_phase()
-    # TempToolsBuild(base_dir, ft)
+    TempToolsBuild(base_dir, ft).build_phase()
     # prepare_and_enter_chroot()
     # ft.root_dir = "/"
-
-"""from cross_toolchain import build_cross_toolchain
-from temp_tools import build_temp_tools
-from chroot import prepare_and_enter_chroot, build_chroot_temp_tools
-
-if __name__ == '__main__':
-    #build_cross_toolchain()
-    build_temp_tools()
-    #prepare_and_enter_chroot()
-    #build_chroot_temp_tools()
-
-# TODO
-# * tracked file checking / remove package function"""
