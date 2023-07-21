@@ -6,7 +6,7 @@ from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
 from chroot_temp_tools import ChrootTempToolsBuild
 
-SYS_DIRS = ["var", "usr/bin", "usr/lib", "usr/sbin", "etc", "lib64", "tools"]
+SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
 
 
 def _ensure_wget_list():
@@ -20,7 +20,7 @@ def _ensure_directory_skeleton():
     for d in SYS_DIRS:
         if not os.path.exists(d):
             os.makedirs(d)
-    extras = ["sources", "package-records"]
+    extras = ["sources", "package-records", "usr/bin", "usr/lib", "usr/sbin"]
     for extra in extras:
         if not os.path.exists(extra):
             os.mkdir(extra)
@@ -144,10 +144,10 @@ def _make_additional_dirs():
         if not os.path.exists(d):
             os.makedirs(d)
 
-    if not os.path.exists("/var/run"):
+    if not os.path.islink("/var/run"):
         os.symlink("/run", "/var/run")
-    #if not os.path.exists("/var/lock"):
-    #    os.symlink("/run/lock", "/var/lock")
+    if not os.path.islink("/var/lock"):
+        os.symlink("/run/lock", "/var/lock")
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
     shutil.chown("/home/tester", user="tester")
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
@@ -185,8 +185,8 @@ if __name__ == "__main__":
     ft = FileTracker(base_dir)
     CrossToolchainBuild(base_dir, ft).build_phase()
     TempToolsBuild(base_dir, ft).build_phase()
-    #prepare_and_enter_chroot(base_dir)
-    #base_dir = "/"
-    #ft.root_dir = "/"
-    #ChrootTempToolsBuild(base_dir, ft).build_phase()
-    #clean_temp_system()
+    prepare_and_enter_chroot(base_dir)
+    base_dir = "/"
+    ft.root_dir = "/"
+    ChrootTempToolsBuild(base_dir, ft).build_phase()
+    clean_temp_system()

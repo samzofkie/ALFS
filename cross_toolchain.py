@@ -90,16 +90,15 @@ class CrossToolchainBuild(PreChrootPhase):
             f.writelines(lines)
 
     def _linux_headers_after(self):
-        destination = self.root_dir
-        files = ["usr/include"]
-        while files:
-            curr = files.pop()
-            if os.path.isdir(curr):
-                files += [curr + "/" + f for f in os.listdir(curr)]
-                os.mkdir(destination + "/" + curr)
-            elif curr[-2:] == ".h":
-                shutil.copy(curr, destination + "/" + curr)
-
+        for root, dirs, files in os.walk("usr/include"):
+            for file in files:
+                if file[-2:] != ".h":
+                    os.remove(f"{root}/{file}")
+        if not os.path.exists(f"{self.root_dir}/usr/include"):
+            os.mkdir(f"{self.root_dir}/usr/include")
+        shutil.copytree("usr/include", f"{self.root_dir}/usr/include",
+                        dirs_exist_ok=True)
+            
     def _cross_glibc_before(self):
         os.symlink(
             "../usr/lib/ld-linux-x86-64.so.2",
