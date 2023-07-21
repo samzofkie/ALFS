@@ -72,7 +72,7 @@ class FileTracker:
         self._update_recorded_files()
         new_files = set()
         for file in self.recorded_files:
-            mtime = time.ctime(os.stat(file).st_mtime)
+            file_time = os.stat(file).st_mtime
             if file_time > start_time:
                 new_files.add(file)
         self._write_file_list(target_name, new_files)
@@ -146,8 +146,8 @@ def _make_additional_dirs():
 
     if not os.path.exists("/var/run"):
         os.symlink("/run", "/var/run")
-    if not os.path.exists("/var/lock"):
-        os.symlink("/run/lock", "/var/lock")
+    #if not os.path.exists("/var/lock"):
+    #    os.symlink("/run/lock", "/var/lock")
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
     shutil.chown("/home/tester", user="tester")
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
@@ -185,8 +185,8 @@ if __name__ == "__main__":
     ft = FileTracker(base_dir)
     CrossToolchainBuild(base_dir, ft).build_phase()
     TempToolsBuild(base_dir, ft).build_phase()
-    prepare_and_enter_chroot(base_dir)
-    base_dit = "/"
-    ft.root_dir = "/"
-    ChrootTempToolsBuild(base_dir, ft).build_phase()
-    clean_temp_system()
+    #prepare_and_enter_chroot(base_dir)
+    #base_dir = "/"
+    #ft.root_dir = "/"
+    #ChrootTempToolsBuild(base_dir, ft).build_phase()
+    #clean_temp_system()

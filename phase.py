@@ -77,7 +77,7 @@ class Phase:
         package_name = self._package_name_from_tarball(tarball_name)
 
         self._untar_and_enter_source_dir(tarball_name)
-        start_time = time.ctime()
+        start_time = time.time()
 
         self._before_build(target_name)
         if build_dir:
