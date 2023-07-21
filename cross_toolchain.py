@@ -96,9 +96,10 @@ class CrossToolchainBuild(PreChrootPhase):
                     os.remove(f"{root}/{file}")
         if not os.path.exists(f"{self.root_dir}/usr/include"):
             os.mkdir(f"{self.root_dir}/usr/include")
-        shutil.copytree("usr/include", f"{self.root_dir}/usr/include",
-                        dirs_exist_ok=True)
-            
+        shutil.copytree(
+            "usr/include", f"{self.root_dir}/usr/include", dirs_exist_ok=True
+        )
+
     def _cross_glibc_before(self):
         os.symlink(
             "../usr/lib/ld-linux-x86-64.so.2",

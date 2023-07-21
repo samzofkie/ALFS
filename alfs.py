@@ -24,6 +24,10 @@ def _ensure_directory_skeleton():
     for extra in extras:
         if not os.path.exists(extra):
             os.mkdir(extra)
+    for d in ["bin", "lib", "sbin"]:
+        if not os.path.exists(f"usr/{d}"):
+            os.mkdir(f"usr/{d}")
+        os.symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
 
 
 def _ensure_tarballs_downloaded():

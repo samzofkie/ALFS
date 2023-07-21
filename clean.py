@@ -16,6 +16,7 @@ def _remove_dirs():
         "media",
         "mnt",
         "opt",
+        "package-records",
         "proc",
         "root",
         "run",
