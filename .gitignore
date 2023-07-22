@@ -6,3 +6,12 @@ tools
 sources
 wget-list
 .python_history
+.bash_history
+.bashrc
+.viminfo
+__pycache__
+bin
+root
+sbin
+tmp
+lib

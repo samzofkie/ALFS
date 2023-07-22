@@ -30,6 +30,9 @@ def _remove_dirs():
     for d in package_names + sys_dirs:
         if os.path.exists(d):
             shutil.rmtree(d)
+    for d in ["bin", "lib", "sbin"]:
+        if os.path.islink(d):
+            os.remove(d)
 
 
 def _clean_etc():

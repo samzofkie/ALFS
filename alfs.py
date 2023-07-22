@@ -5,6 +5,7 @@ from urllib.request import urlopen
 from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
 from chroot_temp_tools import ChrootTempToolsBuild
+from main_build import MainBuild
 
 SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
 
@@ -27,7 +28,8 @@ def _ensure_directory_skeleton():
     for d in ["bin", "lib", "sbin"]:
         if not os.path.exists(f"usr/{d}"):
             os.mkdir(f"usr/{d}")
-        os.symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
+        if not os.path.exists(d):
+            os.symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
 
 
 def _ensure_tarballs_downloaded():
@@ -194,3 +196,4 @@ if __name__ == "__main__":
     ft.root_dir = "/"
     ChrootTempToolsBuild(base_dir, ft).build_phase()
     clean_temp_system()
+    MainBuild(base_dir, ft).build_phase()

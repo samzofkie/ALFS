@@ -29,7 +29,7 @@ class ChrootTempToolsBuild(Phase):
             ]
             + make_install
         }
-        self.targets["temp_python"] = {
+        self.targets["temp_Python"] = {
             "build_commands": [
                 "./configure --prefix=/usr --enable-shared --without-ensurepip"
             ]

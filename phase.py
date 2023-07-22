@@ -54,10 +54,10 @@ class Phase:
         os.chdir("build")
 
     def _before_build(self, target_name):
-        getattr(self, f"_{target_name}_before", lambda: None)()
+        getattr(self, f"_{target_name.replace('-','_')}_before", lambda: None)()
 
     def _after_build(self, target_name):
-        getattr(self, f"_{target_name}_after", lambda: None)()
+        getattr(self, f"_{target_name.replace('-','_')}_after", lambda: None)()
 
     def _run(self, command):
         subprocess.run(command.split(), env=self.env, check=True)
