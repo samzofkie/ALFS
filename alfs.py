@@ -11,10 +11,14 @@ SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
 
 
 def _ensure_wget_list():
-    if not os.path.exists("wget-list"):
-        res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
-        with open("wget-list", "w") as f:
-            f.writelines(res.read().decode())
+    if os.path.exists("wget-list"):
+        return
+    
+    res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
+    urls = res.read().decode().split("\n")
+    urls = [url for url in urls if "tcl8.6.13-html" not in url]
+    with open("wget-list", "w") as f:
+        f.writelines("\n".join(urls))
 
 
 def _ensure_directory_skeleton():
@@ -43,6 +47,9 @@ def _ensure_tarballs_downloaded():
             res = urlopen(url)
             with open("sources/" + tarball_name, "wb") as f:
                 f.write(res.read())
+    
+    if os.path.exists("sources/tcl8.6.13-src.tar.gz"):
+        os.rename("sources/tcl8.6.13-src.tar.gz", "sources/tcl8.6.13.tar.gz")
 
 
 def setup():
@@ -99,7 +106,7 @@ def _mount_vkfs(root_dir):
         f"mount -vt sysfs sysfs {root_dir}/sys",
         f"mount -vt tmpfs tmpfs {root_dir}/run",
     ]:
-        ret = subprocess.run(command.split(), check=True)
+        ret = subprocess.run(command.split())
 
 
 def _enter_chroot(root_dir):
