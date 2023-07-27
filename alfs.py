@@ -43,12 +43,15 @@ def _ensure_tarballs_downloaded():
     for url in tarball_urls:
         tarball_name = url.split("/")[-1]
         if not os.path.exists("sources/" + tarball_name):
+            if tarball_name == "tcl8.6.13-src.tar.gz":
+                if os.path.exists("sources/tcl8.6.13.tar.gz"):
+                    continue
             print("downloading " + tarball_name + "...")
             res = urlopen(url)
             with open("sources/" + tarball_name, "wb") as f:
                 f.write(res.read())
     
-    if os.path.exists("sources/tcl8.6.13-src.tar.gz"):
+    if not os.path.exists("sources/tcl8.6.13.tar.gz"):
         os.rename("sources/tcl8.6.13-src.tar.gz", "sources/tcl8.6.13.tar.gz")
 
 

@@ -39,12 +39,12 @@ def _clean_etc():
     """Run outside chroot please!"""
     contents = os.listdir("etc")
     for item in contents:
-        if item not in ["group", "hosts", "passwd"]:
+        if item not in ["group", "hosts", "passwd", "nsswitch.conf"]:
             item = "etc/" + item
-            if os.path.isfile(item):
-                os.remove(item)
-            else:
+            if os.path.isdir(item):
                 shutil.rmtree(item)
+            else:
+                os.remove(item)
 
 
 def umount_vkfs():
