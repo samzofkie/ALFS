@@ -1,6 +1,6 @@
 import os, shutil, subprocess
 from phase import PreChrootPhase
-
+import utils
 
 class TempToolsBuild(PreChrootPhase):
     def __init__(self, root_dir, file_tracker):
@@ -111,19 +111,17 @@ class TempToolsBuild(PreChrootPhase):
             os.remove(file_path)
 
     def _temp_ncurses_before(self):
-        with open("configure", "r") as f:
-            lines = f.readlines()
+        lines = utils.read_file("configure")
         lines = [line.replace("mawk", "") for line in lines]
-        with open("configure", "w") as f:
-            f.writelines(lines)
+        utils.write_file("configure", lines)
         self._create_and_enter_build_dir()
         for command in ["../configure", "make -C include", "make -C progs tic"]:
             self._run(command)
         os.chdir("..")
 
     def _temp_ncurses_after(self):
-        with open(f"{self.root_dir}/usr/lib/libncurses.so", "w") as f:
-            f.writelines("INPUT(-lncursesw)")
+        utils.write_file(f"{self.root_dir}/usr/lib/libncurses.so",
+                         ["INPUT(-lncursesw)"])
 
     def _temp_bash_after(self):
         os.symlink("bash", f"{self.root_dir}/usr/bin/sh")
@@ -135,12 +133,10 @@ class TempToolsBuild(PreChrootPhase):
             f"{self.root_dir}/usr/share/man/man1/chroot.1",
             f"{self.root_dir}/usr/share/man/man8/chroot.8",
         )
-        with open(f"{self.root_dir}/usr/share/man/man8/chroot.8", "r") as f:
-            lines = f.readlines()
+        lines = utils.read_file(f"{self.root_dir}/usr/share/man/man8/chroot.8")
         for line in lines:
             line.replace('"1"', '"8"')
-        with open(f"{self.root_dir}/usr/share/man/man8/chroot.8", "w") as f:
-            f.writelines(lines)
+        utils.write_file(f"{self.root_dir}/usr/share/man/man8/chroot.8", lines)
 
     def _temp_file_before(self):
         self._create_and_enter_build_dir()
@@ -170,11 +166,9 @@ class TempToolsBuild(PreChrootPhase):
         self._ensure_removal(f"{self.root_dir}/usr/lib/liblzma.la")
 
     def _temp_binutils_before(self):
-        with open("ltmain.sh", "r") as f:
-            lines = f.readlines()
+        lines = utils.read_file("ltmain.sh")
         lines[6008] = lines[6008].replace("$add_dir", "")
-        with open("ltmain.sh", "w") as f:
-            f.writelines(lines)
+        utils.write_file("ltmain.sh", lines)
 
     def _temp_binutils_after(self):
         for name in ["bfd", "ctf", "ctf-nobfd", "opcodes"]:
@@ -185,11 +179,9 @@ class TempToolsBuild(PreChrootPhase):
         self._common_gcc_before()
 
         for section in ["libgcc", "libstdc++-v3/include"]:
-            with open(f"{section}/Makefile.in", "r") as f:
-                file = f.read()
-            file.replace("@thread_header@", "gthr-posix.h")
-            with open(f"{section}/Makefile.in", "w") as f:
-                f.write(file)
+            lines = [line.replace("@thread_header@", "gthr-posix.h")
+                     for line in utils.read_file(f"{section}/Makefile.in")]
+            utils.write_file(f"{section}/Makefile.in", lines)
 
     def _temp_gcc_after(self):
         os.symlink("gcc", f"{self.root_dir}/usr/bin/cc")

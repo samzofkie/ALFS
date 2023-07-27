@@ -2,6 +2,7 @@
 
 import os, subprocess, shutil, time, stat
 from urllib.request import urlopen
+import utils
 from cross_toolchain import CrossToolchainBuild
 from temp_tools import TempToolsBuild
 from chroot_temp_tools import ChrootTempToolsBuild
@@ -11,35 +12,26 @@ SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
 
 
 def _ensure_wget_list():
-    if os.path.exists("wget-list"):
-        return
-    
-    res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
-    urls = res.read().decode().split("\n")
-    urls = [url for url in urls if "tcl8.6.13-html" not in url]
-    with open("wget-list", "w") as f:
-        f.writelines("\n".join(urls))
+    if not os.path.exists("wget-list"):
+        res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
+        urls = res.read().decode().split("\n")
+        urls = [url for url in urls if "tcl8.6.13-html" not in url]
+        utils.write_file("wget-list", "\n".join(urls))
 
 
 def _ensure_directory_skeleton():
     for d in SYS_DIRS:
-        if not os.path.exists(d):
-            os.makedirs(d)
-    extras = ["sources", "package-records", "usr/bin", "usr/lib", "usr/sbin"]
-    for extra in extras:
-        if not os.path.exists(extra):
-            os.mkdir(extra)
+        utils.ensure_dir(d)
+    for extra in ["sources", "package-records", "usr/bin", "usr/lib", "usr/sbin"]:
+        utils.ensure_dir(extra)
     for d in ["bin", "lib", "sbin"]:
-        if not os.path.exists(f"usr/{d}"):
-            os.mkdir(f"usr/{d}")
+        utils.ensure_dir(f"usr/{d}")
         if not os.path.exists(d):
             os.symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
 
 
 def _ensure_tarballs_downloaded():
-    with open("wget-list", "r") as f:
-        tarball_urls = [line.split("\n")[0] for line in f.readlines()]
-
+    tarball_urls = [line.split("\n")[0] for line in utils.read_file("wget-list")]
     for url in tarball_urls:
         tarball_name = url.split("/")[-1]
         if not os.path.exists("sources/" + tarball_name):
@@ -50,7 +42,7 @@ def _ensure_tarballs_downloaded():
             res = urlopen(url)
             with open("sources/" + tarball_name, "wb") as f:
                 f.write(res.read())
-    
+
     if not os.path.exists("sources/tcl8.6.13.tar.gz"):
         os.rename("sources/tcl8.6.13-src.tar.gz", "sources/tcl8.6.13.tar.gz")
 
@@ -81,8 +73,8 @@ class FileTracker:
         self.recorded_files = self._system_snapshot()
 
     def _write_file_list(self, target_name, file_list):
-        with open(f"{self.root_dir}/package-records/{target_name}", "w") as f:
-            f.writelines(sorted([f"{file}\n" for file in file_list]))
+        utils.write_file(f"{self.root_dir}/package-records/{target_name}",
+            sorted("\n".join(file_list)))
 
     def record_new_files_since(self, start_time, target_name):
         self._update_recorded_files()
@@ -100,8 +92,7 @@ class FileTracker:
 def _mount_vkfs(root_dir):
     """Mount Virtual Kernel Filesystems"""
     for d in ["dev", "proc", "sys", "run"]:
-        if not os.path.exists(f"{root_dir}/{d}"):
-            os.mkdir(f"{root_dir}/{d}")
+        utils.ensure_dir(f"{root_dir}/{d}")
     for command in [
         f"mount -v --bind /dev {root_dir}/dev",
         f"mount -v --bind /dev/pts {root_dir}/dev/pts",
@@ -157,8 +148,7 @@ def _make_additional_dirs():
     chroot_dirs += ["var/lib/" + d for d in ["color", "misc", "locate", "hwclock"]]
 
     for d in chroot_dirs:
-        if not os.path.exists(d):
-            os.makedirs(d)
+        utils.ensure_dir(d)
 
     if not os.path.islink("/var/run"):
         os.symlink("/run", "/var/run")

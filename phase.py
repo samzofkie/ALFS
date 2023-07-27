@@ -1,8 +1,10 @@
 import os, subprocess, shutil, time
 from collections import OrderedDict
+import utils
 
 
 class Phase:
+    # targets = OrderedDict()
     def __init__(self, root, file_tracker):
         self.root_dir = root
         self.file_tracker = file_tracker
@@ -49,8 +51,7 @@ class Phase:
 
     @staticmethod
     def _create_and_enter_build_dir():
-        if not os.path.exists("build"):
-            os.mkdir("build")
+        utils.ensure_dir("build")
         os.chdir("build")
 
     def _before_build(self, target_name):
@@ -117,10 +118,8 @@ class PreChrootPhase(Phase):
             self._run(f"mv {package_name} {dep}")
 
         shutil.copyfile("gcc/config/i386/t-linux64", "gcc/config/i386/t-linux64.orig")
-        with open("gcc/config/i386/t-linux64", "r") as f:
-            lines = f.readlines()
+        lines = utils.read_file("gcc/config/i386/t-linux64")
         for line in lines:
             if "m64=" in line:
                 line = line.replace("lib64", "lib")
-        with open("gcc/config/i386/t-linux64", "w") as f:
-            f.writelines(lines)
+        utils.write_file("gcc/config/i386/t-linux64", lines)

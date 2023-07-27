@@ -1,5 +1,6 @@
 import os, shutil, subprocess
 from phase import PreChrootPhase
+import utils
 
 
 class CrossToolchainBuild(PreChrootPhase):
@@ -77,8 +78,7 @@ class CrossToolchainBuild(PreChrootPhase):
         os.chdir("..")
         lines = []
         for file in ["gcc/limitx.h", "gcc/glimits.h", "gcc/limity.h"]:
-            with open(file, "r") as f:
-                lines += f.readlines()
+            lines += utils.read_file(file)
         completed = subprocess.run(
             f"{self.lfs_triplet}-gcc -print-libgcc-file-name".split(" "),
             capture_output=True,
@@ -86,16 +86,14 @@ class CrossToolchainBuild(PreChrootPhase):
             check=True,
         )
         dirname = completed.stdout.decode().rsplit("/", 1)[0]
-        with open(dirname + "/install-tools/include/limits.h", "w") as f:
-            f.writelines(lines)
+        utils.write_file(f"{dirname}/install-tools/include/limits.h", lines)
 
     def _linux_headers_after(self):
         for root, dirs, files in os.walk("usr/include"):
             for file in files:
                 if file[-2:] != ".h":
                     os.remove(f"{root}/{file}")
-        if not os.path.exists(f"{self.root_dir}/usr/include"):
-            os.mkdir(f"{self.root_dir}/usr/include")
+        utils.ensure_dir(f"{self.root_dir}/usr/include")
         shutil.copytree(
             "usr/include", f"{self.root_dir}/usr/include", dirs_exist_ok=True
         )
@@ -114,14 +112,11 @@ class CrossToolchainBuild(PreChrootPhase):
         )
         self._run(f"patch -Np1 -i {self.root_dir}/sources/{package_name}-fhs-1.patch")
 
-        if not os.path.exists("build"):
-            os.mkdir("build")
-        with open("build/configparms", "w") as f:
-            f.write("rootsbindir=/usr/sbin")
+        utils.ensure_dir("build")
+        utils.write_file("build/configparms", ["rootsbindir=/usr/sbin"])
 
     def _cross_glibc_after(self):
-        with open("main.c", "w") as f:
-            f.write("int main(){}")
+        utils.write_file("main.c", "int main(){}")
         self._run(f"{self.lfs_triplet}-gcc -xc main.c")
         completed_process = subprocess.run(
             "readelf -l a.out".split(" "), env=self.env, check=True, capture_output=True
