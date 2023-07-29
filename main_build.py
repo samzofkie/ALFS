@@ -201,8 +201,7 @@ class MainBuild(Phase):
         utils.write_file("build/configparms", ["rootsbindir=/usr/sbin"])
 
     def _glibc_after(self):
-        with open("/etc/ld.so.conf", "w") as f:
-            pass
+        utils.ensure_touch("/etc/ld.so.conf")
         lines = utils.read_file("../Makefile")
         lines[118] = lines[118].replace("$(PERL)", "echo not running")
         utils.write_file("../Makefile", lines)
@@ -398,6 +397,4 @@ class MainBuild(Phase):
         lines = [lines.replace("/var/spool/mail", "/var/mail") for line in lines]
         lines = [line.replace("/sbin:", "").replace("/bin:", "") for line in lines]
         utils.write_file("etc/login.defs", lines)
-
-        with open("/usr/bin/passwd", "w") as f:
-            pass
+        utils.ensure_touch("/usr/bin/passwd")

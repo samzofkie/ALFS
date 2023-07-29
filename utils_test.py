@@ -92,5 +92,26 @@ class TestEnsureSymlink(SeparateDirBase):
         self.assertTrue(os.path.islink("b"))
 
 
+class TestEnsureTouch(SeparateDirBase):
+    def test_touch(self):
+        utils.ensure_touch("a")
+        self.assertTrue("a" in os.listdir())
+
+    def test_already_exists(self):
+        content = ["ok\n", "no problemo\n"]
+        with open("a", "w") as f:
+            f.writelines(content)
+        utils.ensure_touch("a")
+        self.assertTrue("a" in os.listdir())
+        with open("a", "r") as f:
+            self.assertTrue(f.readlines() == content)
+
+    def test_path(self):
+        os.makedirs("a/b/c")
+        utils.ensure_touch("a/b/c/d")
+        self.assertTrue(os.path.exists("a/b/c/d"))
+        shutil.rmtree("a")
+
+
 if __name__ == "__main__":
     unittest.main()

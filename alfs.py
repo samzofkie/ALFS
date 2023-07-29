@@ -159,8 +159,7 @@ def _make_additional_dirs():
 
     shutil.chown("/home/tester", user="tester")
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
-        with open("/var/log/" + file, "a") as f:
-            pass
+        utils.ensure_touch(f"/var/log/{file}")
     shutil.chown("/var/log/lastlog", group="utmp")
     os.chmod(
         "/var/log/lastlog",

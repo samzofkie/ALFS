@@ -1,5 +1,4 @@
 # TODO
-# force symlink
 # touch
 # removal
 # sed
@@ -27,3 +26,9 @@ def ensure_dir(dir_path):
 def ensure_symlink(pointed_at, link_name):
     if not os.path.exists(link_name):
         os.symlink(pointed_at, link_name)
+
+
+def ensure_touch(filename):
+    if not os.path.exists(filename):
+        with open(filename, "w") as f:
+            pass
