@@ -1,10 +1,10 @@
 # TODO
 # force symlink
+# touch
+# removal
+# sed
 # run? os.environ manglin'
 #   quiet run
-# touch
-# ensure removal
-# sed
 
 import os
 
@@ -22,3 +22,8 @@ def write_file(filename, lines):
 def ensure_dir(dir_path):
     if not os.path.isdir(dir_path):
         os.makedirs(dir_path)
+
+
+def ensure_symlink(pointed_at, link_name):
+    if not os.path.exists(link_name):
+        os.symlink(pointed_at, link_name)

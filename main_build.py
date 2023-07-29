@@ -206,17 +206,17 @@ class MainBuild(Phase):
         lines = utils.read_file("../Makefile")
         lines[118] = lines[118].replace("$(PERL)", "echo not running")
         utils.write_file("../Makefile", lines)
-        
+
         self._run("make install")
-        
+
         lines = utils.read_file("/usr/bin/ldd")
         lines[28] = lines[28].replace("/usr", "")
         utils.write_file("/usr/bin/ldd", lines)
-        
+
         shutil.copy("../nscd/nscd.conf", "/etc")
         os.makedirs("/var/cache/nscd")
         os.makedirs("/usr/lib/locale")
-        
+
         self._run("make localedata/install-locales")
         subprocess.run("localedef -i POSIX -f UTF-8 C.UTF-8".split(), env=self.env)
         subprocess.run(
@@ -243,7 +243,7 @@ class MainBuild(Phase):
         for file in ["zone.tab", "zone1970.tab", "iso3166.tab"]:
             shutil.copy(file, zoneinfo)
         self._run(f"zic -d {zoneinfo} -p America/New_York")
-        os.symlink("/usr/share/zoneinfo/Chicago", "/etc/localtime")
+        utils.ensure_symlink("/usr/share/zoneinfo/Chicago", "/etc/localtime")
         utils.write_file("/etc/ld.so.conf", ["/usr/local/lib\n", "/opt/lib\n"])
 
     def _zlib_after(self):
@@ -262,13 +262,13 @@ class MainBuild(Phase):
 
     def _bzip2_after(self):
         shutil.copy("libbz2.so.1.0.8", "/usr/lib")
-        os.symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so.1.0")
-        os.symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so")
+        utils.ensure_symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so.1.0")
+        utils.ensure_symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so")
         shutil.copy("bzip2-shared", "/usr/bin/bzip2")
         for binary in ["bzcat", "bunzip2"]:
             if os.path.exists(f"/usr/bin/{binary}"):
                 os.remove(f"/usr/bin/{binary}")
-            os.symlink("bzip2", f"/usr/bin/{binary}")
+            utils.ensure_symlink("bzip2", f"/usr/bin/{binary}")
         os.remove("/usr/lib/libbz2.a")
 
     def _zstd_after(self):
@@ -279,7 +279,7 @@ class MainBuild(Phase):
         lines = utils.read_file("Makefile.in")
         lines = [line for line in lines if not ("MV" in line and line[-5:] == ".old\n")]
         utils.write_file("Makefile.in", lines)
-        
+
         lines = utils.read_file("support/shlib-install")
         for i in range(len(lines)):
             if "{OLDSUFF}" in lines[i]:
@@ -296,7 +296,7 @@ class MainBuild(Phase):
                     )
 
     def _flex_after(self):
-        os.symlink("flex", "/usr/bin/lex")
+        utils.ensure_symlink("flex", "/usr/bin/lex")
 
     def _tcl_before(self):
         os.chdir("unix")
@@ -343,13 +343,11 @@ class MainBuild(Phase):
     def _tcl_after(self):
         os.chmod("/usr/lib/libtcl8.6.so", 0o755)
         self._run("make install-private-headers")
-        if not os.path.islink("/usr/bin/tclsh"):
-            os.symlink("tclsh8.6", "/usr/bin/tclsh")
+        utils.ensure_symlink("tclsh8.6", "/usr/bin/tclsh")
         shutil.move("/usr/share/man/man3/Thread.3", "/usr/share/man/man3/Tcl_Thread.3")
 
     def _expect_after(self):
-        if not os.path.exists("/usr/lib/libexpect5.45.4.so"):
-            os.symlink("expect5.45.4/libexpect5.45.4.so", "/usr/lib")
+        utils.ensure_symlink("expect5.45.4/libexpect5.45.4.so", "/usr/lib")
 
     def _binutils_after(self):
         for name in ["bfd", "ctf", "ctf-nobfd", "sframe", "opcodes"]:
@@ -376,12 +374,12 @@ class MainBuild(Phase):
         lines = utils.read_file("src/Makefile.in")
         lines = [line.replace("groups$(EXEEXT) ", "") for line in lines]
         utils.write_file("src/Makefile.in", lines)
-        
+
         makefiles = []
         for root, _, files in os.walk("man"):
             if "Makefile.in" in files:
                 makefiles.append(f"{root}/Makefile.in")
-        
+
         for makefile in makefiles:
             lines = utils.read_file(makefile)
             lines = [line.replace("groups.1 ", " ") for line in lines]

@@ -99,13 +99,13 @@ class CrossToolchainBuild(PreChrootPhase):
         )
 
     def _cross_glibc_before(self):
-        os.symlink(
+        utils.ensure_symlink(
             "../usr/lib/ld-linux-x86-64.so.2",
-            self.root_dir + "/lib64/ld-linux-x86-64.so.2",
+            f"{self.root_dir}/lib64/ld-linux-x86-64.so.2",
         )
-        os.symlink(
+        utils.ensure_symlink(
             "../usr/lib/ld-linux-x86-64.so.2",
-            self.root_dir + "/lib64/ld-lsb-x86-64.so.3",
+            f"{self.root_dir}/lib64/ld-lsb-x86-64.so.3",
         )
         package_name = self._package_name_from_tarball(
             self._search_for_tarball("glibc")

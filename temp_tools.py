@@ -2,6 +2,7 @@ import os, shutil, subprocess
 from phase import PreChrootPhase
 import utils
 
+
 class TempToolsBuild(PreChrootPhase):
     def __init__(self, root_dir, file_tracker):
         super().__init__(root_dir, file_tracker)
@@ -120,11 +121,12 @@ class TempToolsBuild(PreChrootPhase):
         os.chdir("..")
 
     def _temp_ncurses_after(self):
-        utils.write_file(f"{self.root_dir}/usr/lib/libncurses.so",
-                         ["INPUT(-lncursesw)"])
+        utils.write_file(
+            f"{self.root_dir}/usr/lib/libncurses.so", ["INPUT(-lncursesw)"]
+        )
 
     def _temp_bash_after(self):
-        os.symlink("bash", f"{self.root_dir}/usr/bin/sh")
+        utils.ensure_symlink("bash", f"{self.root_dir}/usr/bin/sh")
 
     def _temp_coreutils_after(self):
         shutil.move(f"{self.root_dir}/usr/bin/chroot", f"{self.root_dir}/usr/sbin")
@@ -179,9 +181,11 @@ class TempToolsBuild(PreChrootPhase):
         self._common_gcc_before()
 
         for section in ["libgcc", "libstdc++-v3/include"]:
-            lines = [line.replace("@thread_header@", "gthr-posix.h")
-                     for line in utils.read_file(f"{section}/Makefile.in")]
+            lines = [
+                line.replace("@thread_header@", "gthr-posix.h")
+                for line in utils.read_file(f"{section}/Makefile.in")
+            ]
             utils.write_file(f"{section}/Makefile.in", lines)
 
     def _temp_gcc_after(self):
-        os.symlink("gcc", f"{self.root_dir}/usr/bin/cc")
+        utils.ensure_symlink("gcc", f"{self.root_dir}/usr/bin/cc")

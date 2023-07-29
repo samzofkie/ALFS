@@ -26,8 +26,7 @@ def _ensure_directory_skeleton():
         utils.ensure_dir(extra)
     for d in ["bin", "lib", "sbin"]:
         utils.ensure_dir(f"usr/{d}")
-        if not os.path.exists(d):
-            os.symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
+        utils.ensure_symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
 
 
 def _ensure_tarballs_downloaded():
@@ -73,8 +72,10 @@ class FileTracker:
         self.recorded_files = self._system_snapshot()
 
     def _write_file_list(self, target_name, file_list):
-        utils.write_file(f"{self.root_dir}/package-records/{target_name}",
-            sorted("\n".join(file_list)))
+        utils.write_file(
+            f"{self.root_dir}/package-records/{target_name}",
+            sorted("\n".join(file_list)),
+        )
 
     def record_new_files_since(self, start_time, target_name):
         self._update_recorded_files()
@@ -150,11 +151,12 @@ def _make_additional_dirs():
     for d in chroot_dirs:
         utils.ensure_dir(d)
 
-    if not os.path.islink("/var/run"):
-        os.symlink("/run", "/var/run")
-    if not os.path.islink("/var/lock"):
-        os.symlink("/run/lock", "/var/lock")
+    utils.ensure_symlink("/run", "/var/run")
+    utils.ensure_symlink("/run/lock", "/var/lock")
+
+    # No way to set sticky bit with os.chmod
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
+
     shutil.chown("/home/tester", user="tester")
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
         with open("/var/log/" + file, "a") as f:
