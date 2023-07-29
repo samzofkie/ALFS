@@ -131,7 +131,5 @@ class CrossToolchainBuild(PreChrootPhase):
         )
 
     def _cross_libstdcpp_after(self):
-        for prefix in ["stdc++", "stdc++fs", "supc++"]:
-            archive = self.root_dir + "/usr/lib/lib" + prefix + ".la"
-            if os.path.exists(archive):
-                os.remove(archive)
+        for name in ["stdc++", "stdc++fs", "supc++"]:
+            utils.ensure_removal(f"{self.root_dir}/usr/lib/lib{name}.la")

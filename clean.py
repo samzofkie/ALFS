@@ -9,10 +9,10 @@ def _remove_dirs():
         if ".tar" in tarball
     ]
     sys_dirs = [
-        "boot",
+        "bin" "boot",
         "dev",
         "home",
-        "lib64",
+        "lib" "lib64",
         "media",
         "mnt",
         "opt",
@@ -20,7 +20,7 @@ def _remove_dirs():
         "proc",
         "root",
         "run",
-        "srv",
+        "sbin" "srv",
         "sys",
         "tmp",
         "tools",
@@ -28,11 +28,7 @@ def _remove_dirs():
         "var",
     ]
     for d in package_names + sys_dirs:
-        if os.path.exists(d):
-            shutil.rmtree(d)
-    for d in ["bin", "lib", "sbin"]:
-        if os.path.islink(d):
-            os.remove(d)
+        utils.ensure_removal(d)
 
 
 def _clean_etc():
@@ -40,11 +36,7 @@ def _clean_etc():
     contents = os.listdir("etc")
     for item in contents:
         if item not in ["group", "hosts", "passwd", "nsswitch.conf"]:
-            item = "etc/" + item
-            if os.path.isdir(item):
-                shutil.rmtree(item)
-            else:
-                os.remove(item)
+            utils.ensure_removal(f"etc/{item}")
 
 
 def umount_vkfs():

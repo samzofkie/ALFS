@@ -113,5 +113,32 @@ class TestEnsureTouch(SeparateDirBase):
         shutil.rmtree("a")
 
 
+class TestEnsureRemoval(SeparateDirBase):
+    def test_no_file(self):
+        utils.ensure_removal("a")
+
+    def test_normal_file(self):
+        utils.ensure_touch("a")
+        utils.ensure_removal("a")
+        self.assertTrue("a" not in os.listdir())
+
+    def test_dir(self):
+        os.mkdir("a")
+        utils.ensure_removal("a")
+        self.assertTrue("a" not in os.listdir())
+
+    def test_full_dir(self):
+        os.mkdir("a")
+        for file in ["b", "c", "d"]:
+            utils.ensure_touch(f"a/{file}")
+        utils.ensure_removal("a")
+        self.assertTrue("a" not in os.listdir())
+
+    def test_symlink(self):
+        os.symlink("a", "b")
+        utils.ensure_removal("b")
+        self.assertTrue("b" not in os.listdir())
+
+
 if __name__ == "__main__":
     unittest.main()

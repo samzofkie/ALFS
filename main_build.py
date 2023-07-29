@@ -246,8 +246,7 @@ class MainBuild(Phase):
         utils.write_file("/etc/ld.so.conf", ["/usr/local/lib\n", "/opt/lib\n"])
 
     def _zlib_after(self):
-        if os.path.exists("/usr/lib/libz.a"):
-            os.remove("/usr/lib/libz.a")
+        utils.ensure_removal("/usr/lib/libz.a")
 
     def _bzip2_before(self):
         self._run("patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch")
@@ -265,14 +264,12 @@ class MainBuild(Phase):
         utils.ensure_symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so")
         shutil.copy("bzip2-shared", "/usr/bin/bzip2")
         for binary in ["bzcat", "bunzip2"]:
-            if os.path.exists(f"/usr/bin/{binary}"):
-                os.remove(f"/usr/bin/{binary}")
+            utils.ensure_removal(f"/usr/bin/{binary}")
             utils.ensure_symlink("bzip2", f"/usr/bin/{binary}")
-        os.remove("/usr/lib/libbz2.a")
+        utils.ensure_removal("/usr/lib/libbz2.a")
 
     def _zstd_after(self):
-        if os.path.exists("/usr/lib/libzstd.a"):
-            os.remove("/usr/lib/libzstd.a")
+        utils.ensure_removal("/usr/lib/libzstd.a")
 
     def _readline_before(self):
         lines = utils.read_file("Makefile.in")
@@ -350,11 +347,11 @@ class MainBuild(Phase):
 
     def _binutils_after(self):
         for name in ["bfd", "ctf", "ctf-nobfd", "sframe", "opcodes"]:
-            os.remove(f"/usr/lib/lib{name}.a")
-        os.remove("/usr/share/man/man1/gprofng.1")
+            utils.ensure_removal(f"/usr/lib/lib{name}.a")
+        utils.ensure_removal("/usr/share/man/man1/gprofng.1")
         for file in os.listdir("/usr/share/man/man1"):
             if file[:3] == "gp-" and file[-2:] == ".1":
-                os.remove(f"/usr/share/man/man1/{file}")
+                utils.ensure_removal(f"/usr/share/man/man1/{file}")
 
     def _mpfr_before(self):
         lines = utils.read_file("test/tsprintf.c")

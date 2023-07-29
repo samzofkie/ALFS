@@ -1,11 +1,9 @@
 # TODO
-# touch
-# removal
 # sed
 # run? os.environ manglin'
 #   quiet run
 
-import os
+import os, shutil
 
 
 def read_file(filename):
@@ -32,3 +30,11 @@ def ensure_touch(filename):
     if not os.path.exists(filename):
         with open(filename, "w") as f:
             pass
+
+
+def ensure_removal(path):
+    if os.path.exists(path) or os.path.islink(path):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)

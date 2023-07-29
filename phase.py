@@ -65,7 +65,7 @@ class Phase:
 
     def _clean_up_build(self, package_name):
         os.chdir(self.root_dir)
-        shutil.rmtree(package_name)
+        utils.ensure_removal(package_name)
 
     def _build_package(
         self, target_name, build_commands, search_term="", build_dir=False

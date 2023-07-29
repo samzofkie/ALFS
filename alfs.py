@@ -182,8 +182,8 @@ def clean_temp_system():
         for full_path, _, files in os.walk(f"/usr/{lib_dir}"):
             for file in files:
                 if file[-3:] == ".la":
-                    os.remove(f"{full_path}/{file}")
-    shutil.rmtree("/tools")
+                    utils.ensure_removal(f"{full_path}/{file}")
+    utils.ensure_removal("/tools")
 
 
 if __name__ == "__main__":

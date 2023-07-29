@@ -106,11 +106,6 @@ class TempToolsBuild(PreChrootPhase):
             "build_dir": True,
         }
 
-    @staticmethod
-    def _ensure_removal(file_path):
-        if os.path.exists(file_path):
-            os.remove(file_path)
-
     def _temp_ncurses_before(self):
         lines = utils.read_file("configure")
         lines = [line.replace("mawk", "") for line in lines]
@@ -150,7 +145,7 @@ class TempToolsBuild(PreChrootPhase):
         os.chdir("..")
 
     def _temp_file_after(self):
-        self._ensure_removal(f"{self.root_dir}/usr/lib/libmagic.la")
+        utils.ensure_removal(f"{self.root_dir}/usr/lib/libmagic.la")
 
     def _temp_make_before(self):
         with open("src/main.c", "r") as f:
@@ -165,7 +160,7 @@ class TempToolsBuild(PreChrootPhase):
             f.write(file)
 
     def _temp_xz_after(self):
-        self._ensure_removal(f"{self.root_dir}/usr/lib/liblzma.la")
+        utils.ensure_removal(f"{self.root_dir}/usr/lib/liblzma.la")
 
     def _temp_binutils_before(self):
         lines = utils.read_file("ltmain.sh")
@@ -175,7 +170,7 @@ class TempToolsBuild(PreChrootPhase):
     def _temp_binutils_after(self):
         for name in ["bfd", "ctf", "ctf-nobfd", "opcodes"]:
             for extension in [".a", ".la"]:
-                self._ensure_removal(f"{self.root_dir}/usr/lib/lib{name}{extension}")
+                utils.ensure_removal(f"{self.root_dir}/usr/lib/lib{name}{extension}")
 
     def _temp_gcc_before(self):
         self._common_gcc_before()
