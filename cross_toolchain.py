@@ -92,7 +92,7 @@ class CrossToolchainBuild(PreChrootPhase):
         for root, dirs, files in os.walk("usr/include"):
             for file in files:
                 if file[-2:] != ".h":
-                    os.remove(f"{root}/{file}")
+                    utils.ensure_removal(f"{root}/{file}")
         utils.ensure_dir(f"{self.root_dir}/usr/include")
         shutil.copytree(
             "usr/include", f"{self.root_dir}/usr/include", dirs_exist_ok=True

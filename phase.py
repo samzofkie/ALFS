@@ -118,8 +118,7 @@ class PreChrootPhase(Phase):
             self._run(f"mv {package_name} {dep}")
 
         shutil.copyfile("gcc/config/i386/t-linux64", "gcc/config/i386/t-linux64.orig")
-        lines = utils.read_file("gcc/config/i386/t-linux64")
-        for line in lines:
-            if "m64=" in line:
-                line = line.replace("lib64", "lib")
-        utils.write_file("gcc/config/i386/t-linux64", lines)
+        utils.modify(
+            "gcc/config/i386/t-linux64",
+            lambda line, _: line.replace("lib64", "lib") if "m64" in line else line,
+        )

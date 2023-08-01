@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import subprocess, os, shutil, sys
+import utils
 
 
 def _remove_dirs():
@@ -9,10 +10,12 @@ def _remove_dirs():
         if ".tar" in tarball
     ]
     sys_dirs = [
-        "bin" "boot",
+        "bin",
+        "boot",
         "dev",
         "home",
-        "lib" "lib64",
+        "lib",
+        "lib64",
         "media",
         "mnt",
         "opt",
@@ -20,7 +23,8 @@ def _remove_dirs():
         "proc",
         "root",
         "run",
-        "sbin" "srv",
+        "sbin",
+        "srv",
         "sys",
         "tmp",
         "tools",

@@ -150,7 +150,7 @@ def _make_additional_dirs():
 
     for d in chroot_dirs:
         utils.ensure_dir(d)
-
+    
     utils.ensure_symlink("/run", "/var/run")
     utils.ensure_symlink("/run/lock", "/var/lock")
 
@@ -158,13 +158,17 @@ def _make_additional_dirs():
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
 
     shutil.chown("/home/tester", user="tester")
+
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
         utils.ensure_touch(f"/var/log/{file}")
+
     shutil.chown("/var/log/lastlog", group="utmp")
+
     os.chmod(
         "/var/log/lastlog",
         stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH,
     )
+
     os.chmod("/var/log/btmp", stat.S_IRUSR | stat.S_IWUSR)
 
 

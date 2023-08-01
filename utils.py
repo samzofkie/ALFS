@@ -22,7 +22,9 @@ def ensure_dir(dir_path):
 
 
 def ensure_symlink(pointed_at, link_name):
-    if not os.path.exists(link_name):
+    if os.path.isdir(link_name):
+        link_name += f"/{pointed_at.split('/')[-1]}"
+    if not os.path.islink(link_name):
         os.symlink(pointed_at, link_name)
 
 
@@ -34,7 +36,16 @@ def ensure_touch(filename):
 
 def ensure_removal(path):
     if os.path.exists(path) or os.path.islink(path):
-        if os.path.isdir(path):
+        if os.path.islink(path):
+            os.remove(path)
+        elif os.path.isdir(path):
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+
+def modify(filename, function):
+    lines = read_file(filename)
+    for i in range(len(lines)):
+        lines[i] = function(lines[i], i)
+    write_file(filename, lines)

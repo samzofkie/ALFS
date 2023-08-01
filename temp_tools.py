@@ -107,9 +107,8 @@ class TempToolsBuild(PreChrootPhase):
         }
 
     def _temp_ncurses_before(self):
-        lines = utils.read_file("configure")
-        lines = [line.replace("mawk", "") for line in lines]
-        utils.write_file("configure", lines)
+        utils.modify("configure", lambda line, _: line.replace("mawk", ""))
+
         self._create_and_enter_build_dir()
         for command in ["../configure", "make -C include", "make -C progs tic"]:
             self._run(command)
@@ -130,10 +129,10 @@ class TempToolsBuild(PreChrootPhase):
             f"{self.root_dir}/usr/share/man/man1/chroot.1",
             f"{self.root_dir}/usr/share/man/man8/chroot.8",
         )
-        lines = utils.read_file(f"{self.root_dir}/usr/share/man/man8/chroot.8")
-        for line in lines:
-            line.replace('"1"', '"8"')
-        utils.write_file(f"{self.root_dir}/usr/share/man/man8/chroot.8", lines)
+        utils.modify(
+            f"{self.root_dir}/usr/share/man/man8/chroot.8",
+            lambda line, _: line.replace('"1"', '"8"'),
+        )
 
     def _temp_file_before(self):
         self._create_and_enter_build_dir()
@@ -163,9 +162,10 @@ class TempToolsBuild(PreChrootPhase):
         utils.ensure_removal(f"{self.root_dir}/usr/lib/liblzma.la")
 
     def _temp_binutils_before(self):
-        lines = utils.read_file("ltmain.sh")
-        lines[6008] = lines[6008].replace("$add_dir", "")
-        utils.write_file("ltmain.sh", lines)
+        utils.modify(
+            "ltmain.sh",
+            lambda line, i: line.replace("$add_dir", "") if i == 6008 else line,
+        )
 
     def _temp_binutils_after(self):
         for name in ["bfd", "ctf", "ctf-nobfd", "opcodes"]:
@@ -176,11 +176,10 @@ class TempToolsBuild(PreChrootPhase):
         self._common_gcc_before()
 
         for section in ["libgcc", "libstdc++-v3/include"]:
-            lines = [
-                line.replace("@thread_header@", "gthr-posix.h")
-                for line in utils.read_file(f"{section}/Makefile.in")
-            ]
-            utils.write_file(f"{section}/Makefile.in", lines)
+            utils.modify(
+                f"{section}/Makefile.in",
+                lambda line, _: line.replace("@thread_header@", "gthr-posix.h"),
+            )
 
     def _temp_gcc_after(self):
         utils.ensure_symlink("gcc", f"{self.root_dir}/usr/bin/cc")

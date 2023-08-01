@@ -34,6 +34,12 @@ class TestWriteFile(SeparateDirBase):
         self.assertEqual(lines, test_lines)
         os.remove("test")
 
+    def test_empty_file(self):
+        utils.write_file("test", [])
+        with open("test", "r") as f:
+            self.assertEqual([], f.readlines())
+        self.assertTrue("test" in os.listdir())
+
 
 class TestEnsureDir(SeparateDirBase):
     def _check_abc_hierarchy(self):
@@ -138,6 +144,27 @@ class TestEnsureRemoval(SeparateDirBase):
         os.symlink("a", "b")
         utils.ensure_removal("b")
         self.assertTrue("b" not in os.listdir())
+
+
+class TestModify(SeparateDirBase):
+    def test_empty_file(self):
+        utils.ensure_touch("a")
+        utils.modify("a", lambda line, i: line if "a" not in line else "b")
+        self.assertTrue(utils.read_file("a") == [])
+
+    def test_a_to_b(self):
+        content = ["a\n", "aa\n", "ab\n", "b\n"]
+        utils.write_file("a", content)
+        utils.modify("a", lambda line, _: line.replace("a", "b"))
+        content = [line.replace("a", "b") for line in content]
+        self.assertTrue(utils.read_file("a") == content)
+
+    def test_only_one_line(self):
+        content = ["a\n", "aa\n", "ab\n", "b\n"]
+        utils.write_file("a", content)
+        utils.modify("a", lambda line, i: line.replace("a", "b") if i == 2 else line)
+        content[2] = content[2].replace("a", "b")
+        self.assertTrue(utils.read_file("a") == content)
 
 
 if __name__ == "__main__":
