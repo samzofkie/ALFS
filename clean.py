@@ -3,13 +3,17 @@ import subprocess, os, shutil, sys
 import utils
 
 
-def _remove_dirs():
-    package_names = [
+def remove_source_dirs():
+    for d in [
         tarball.split(".tar")[0]
         for tarball in os.listdir("sources")
         if ".tar" in tarball
-    ]
-    sys_dirs = [
+    ]:
+        utils.ensure_removal(d)
+
+
+def _remove_sys_dirs():
+    for d in [
         "bin",
         "boot",
         "dev",
@@ -30,8 +34,7 @@ def _remove_dirs():
         "tools",
         "usr",
         "var",
-    ]
-    for d in package_names + sys_dirs:
+    ]:
         utils.ensure_removal(d)
 
 
@@ -43,20 +46,18 @@ def _clean_etc():
             utils.ensure_removal(f"etc/{item}")
 
 
-def umount_vkfs():
+def _umount_vkfs():
     """Run outside the chroot please!"""
     for d in ["dev/pts", "dev", "proc", "sys", "run"]:
-        subprocess.run(f"umount {d}".split(), capture_output=True)
+        subprocess.run(f"umount {d}".split())
 
 
 def clean():
-    umount_vkfs()
-    _remove_dirs()
+    _umount_vkfs()
+    remove_source_dirs()
+    _remove_sys_dirs()
     _clean_etc()
 
 
 if __name__ == "__main__":
-    if "umount" in sys.argv:
-        umount_vkfs()
-    else:
-        clean()
+    clean()

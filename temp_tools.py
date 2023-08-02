@@ -1,130 +1,59 @@
 import os, shutil, subprocess
-from phase import PreChrootPhase
+
+from package import PreChrootPackage, Package
 import utils
 
 
-class TempToolsBuild(PreChrootPhase):
-    def __init__(self, root_dir, file_tracker):
-        super().__init__(root_dir, file_tracker)
+class TempM4(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host_build] + self.make_destdir)
 
-        prefix_host = f"./configure --prefix=/usr --host={self.lfs_triplet}"
-        prefix_host_build = prefix_host + f" --build={self.host_triplet}"
-        make_destdir = ["make", f"make DESTDIR={self.root_dir} install"]
 
-        def _add(self, target_name, build_commands):
-            self.targets[target_name] = {"build_commands": build_commands}
-
-        _add(self, "temp_m4", [prefix_host_build] + make_destdir)
-        self.targets["temp_ncurses"] = {
-            "build_commands": [
-                (
-                    f"./configure --prefix=/usr --host={self.lfs_triplet} "
-                    f"--build={self.host_triplet} --mandir=/usr/share/man "
-                    "--with-manpage-format=normal --with-shared --without-normal "
-                    "--with-cxx-shared --without-debug --without-ada "
-                    "--disable-stripping --enable-widec"
-                ),
-                "make",
-                (
-                    f"make DESTDIR={self.root_dir} "
-                    f"TIC_PATH={self.root_dir}/ncurses-6.4/build/progs/tic install"
-                ),
-            ]
-        }
-        _add(
-            self,
-            "temp_bash",
-            [prefix_host_build + " --without-bash-malloc"] + make_destdir,
-        )
-        _add(
-            self,
-            "temp_coreutils",
-            [
-                prefix_host_build
-                + (
-                    " --enable-install-program=hostname "
-                    "--enable-no-install-program=kill,uptime"
-                )
-            ]
-            + make_destdir,
-        )
-        _add(self, "temp_diffutils", [prefix_host] + make_destdir)
-        _add(
-            self,
-            "temp_file",
-            [
-                prefix_host_build,
-                f"make FILE_COMPILE={self.root_dir}/file-5.44/build/src/file",
-                f"make DESTDIR={self.root_dir} install",
-            ],
-        )
-        _add(
-            self,
-            "temp_findutils",
-            [prefix_host_build + "--localstatedir=/var/lib/locate"] + make_destdir,
-        )
-        _add(self, "temp_gawk", [prefix_host_build] + make_destdir)
-        _add(self, "temp_grep", [prefix_host] + make_destdir)
-        _add(self, "temp_gzip", [prefix_host] + make_destdir)
-        _add(self, "temp_make", [prefix_host_build + " --without-guile"] + make_destdir)
-        _add(self, "temp_patch", [prefix_host_build] + make_destdir)
-        _add(self, "temp_sed", [prefix_host] + make_destdir)
-        _add(self, "temp_tar", [prefix_host_build] + make_destdir)
-        _add(
-            self,
-            "temp_xz",
-            [prefix_host_build + " --disable-static --docdir=/usr/share/doc/xz-5.4.1"]
-            + make_destdir,
-        )
-        self.targets["temp_binutils"] = {
-            "build_commands": [
-                "."
-                + prefix_host_build
-                + (
-                    " --disable-nls "
-                    "--enable-shared --enable-gprofng=no --disable-werror "
-                    "--enable-64-bit-bfd"
-                )
-            ]
-            + make_destdir,
-            "build_dir": True,
-        }
-        self.targets["temp_gcc"] = {
-            "build_commands": [
-                (
-                    f"../configure --build={self.host_triplet} "
-                    f"--host={self.lfs_triplet} --target={self.lfs_triplet} "
-                    f"LDFLAGS_FOR_TARGET=-L{self.root_dir}/gcc-12.2.0/build/{self.lfs_triplet}/libgcc "
-                    f"--prefix=/usr --with-build-sysroot={self.root_dir} "
-                    "--enable-default-pie --enable-default-ssp --disable-nls "
-                    "--disable-multilib --disable-libatomic --disable-libgomp "
-                    "--disable-libquadmath --disable-libssp --disable-libvtv "
-                    "--enable-languages=c,c++"
-                )
-            ]
-            + make_destdir,
-            "build_dir": True,
-        }
-
-    def _temp_ncurses_before(self):
+class TempNcurses(PreChrootPackage):
+    def _inner_build(self):
         utils.modify("configure", lambda line, _: line.replace("mawk", ""))
-
         self._create_and_enter_build_dir()
-        for command in ["../configure", "make -C include", "make -C progs tic"]:
-            self._run(command)
+        self._run_commands(["../configure", "make -C include", "make -C progs tic"])
         os.chdir("..")
+        self._run_commands(
+            [
+                f"./configure --prefix=/usr --host={self.lfs_triplet} "
+                f"--build={self.host_triplet} --mandir=/usr/share/man "
+                "--with-manpage-format=normal --with-shared --without-normal "
+                "--with-cxx-shared --without-debug --without-ada "
+                "--disable-stripping --enable-widec",
+                "make",
+                f"make DESTDIR={self.root_dir} "
+                f"TIC_PATH={self.root_dir}/ncurses-6.4/build/progs/tic install",
+            ]
+        )
 
-    def _temp_ncurses_after(self):
         utils.write_file(
             f"{self.root_dir}/usr/lib/libncurses.so", ["INPUT(-lncursesw)"]
         )
 
-    def _temp_bash_after(self):
+
+class TempBash(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands(
+            [self.config_prefix_host_build + " --without-bash-malloc"]
+            + self.make_destdir
+        )
         utils.ensure_symlink("bash", f"{self.root_dir}/usr/bin/sh")
 
-    def _temp_coreutils_after(self):
+
+class TempCoreutils(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                self.config_prefix_host_build + " --enable-install-program=hostname "
+                "--enable-no-install-program=kill,uptime"
+            ]
+            + self.make_destdir
+        )
+
         shutil.move(f"{self.root_dir}/usr/bin/chroot", f"{self.root_dir}/usr/sbin")
-        os.makedirs(f"{self.root_dir}/usr/share/man/man8")
+        utils.ensure_dir(f"{self.root_dir}/usr/share/man/man8")
         shutil.move(
             f"{self.root_dir}/usr/share/man/man1/chroot.1",
             f"{self.root_dir}/usr/share/man/man8/chroot.8",
@@ -134,7 +63,14 @@ class TempToolsBuild(PreChrootPhase):
             lambda line, _: line.replace('"1"', '"8"'),
         )
 
-    def _temp_file_before(self):
+
+class TempDiffutils(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host] + self.make_destdir)
+
+
+class TempFile(PreChrootPackage):
+    def _inner_build(self):
         self._create_and_enter_build_dir()
         self._run(
             "../configure --disable-bzlib --disable-libseccomp --disable-xzlib "
@@ -143,10 +79,42 @@ class TempToolsBuild(PreChrootPhase):
         self._run("make")
         os.chdir("..")
 
-    def _temp_file_after(self):
+        self._run_commands(
+            [
+                self.config_prefix_host_build,
+                f"make FILE_COMPILE={self.root_dir}/file-5.44/build/src/file",
+                f"make DESTDIR={self.root_dir} install",
+            ]
+        )
+
         utils.ensure_removal(f"{self.root_dir}/usr/lib/libmagic.la")
 
-    def _temp_make_before(self):
+
+class TempFindutils(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands(
+            [self.config_prefix_host_build + " --localstatedir=/var/lib/locate"]
+            + self.make_destdir
+        )
+
+
+class TempGawk(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host_build] + self.make_destdir)
+
+
+class TempGrep(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host] + self.make_destdir)
+
+
+class TempGzip(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host] + self.make_destdir)
+
+
+class TempMake(PreChrootPackage):
+    def _inner_build(self):
         with open("src/main.c", "r") as f:
             file = f.read()
         bad_chunk_start = file.find("#ifdef SIGPIPE")
@@ -158,28 +126,180 @@ class TempToolsBuild(PreChrootPhase):
         with open("src/main.c", "w") as f:
             f.write(file)
 
-    def _temp_xz_after(self):
+        self._run_commands(
+            [self.config_prefix_host_build + " --without-guile"] + self.make_destdir
+        )
+
+
+class TempPatch(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host_build] + self.make_destdir)
+
+
+class TempSed(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host] + self.make_destdir)
+
+
+class TempTar(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands([self.config_prefix_host_build] + self.make_destdir)
+
+
+class TempXz(PreChrootPackage):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                self.config_prefix_host_build
+                + " --disable-static --docdir=/usr/share/doc/xz-5.4.1"
+            ]
+            + self.make_destdir
+        )
         utils.ensure_removal(f"{self.root_dir}/usr/lib/liblzma.la")
 
-    def _temp_binutils_before(self):
+
+class TempBinutils(PreChrootPackage):
+    def _inner_build(self):
         utils.modify(
             "ltmain.sh",
             lambda line, i: line.replace("$add_dir", "") if i == 6008 else line,
         )
 
-    def _temp_binutils_after(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f".{self.config_prefix_host_build} --disable-nls --enable-shared "
+                "--enable-gprofng=no --disable-werror --enable-64-bit-bfd"
+            ]
+            + self.make_destdir
+        )
+
         for name in ["bfd", "ctf", "ctf-nobfd", "opcodes"]:
             for extension in [".a", ".la"]:
                 utils.ensure_removal(f"{self.root_dir}/usr/lib/lib{name}{extension}")
 
-    def _temp_gcc_before(self):
-        self._common_gcc_before()
 
+class TempGcc(PreChrootPackage):
+    def _inner_build(self):
+        self._common_gcc_before()
         for section in ["libgcc", "libstdc++-v3/include"]:
             utils.modify(
                 f"{section}/Makefile.in",
                 lambda line, _: line.replace("@thread_header@", "gthr-posix.h"),
             )
 
-    def _temp_gcc_after(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f"../configure --build={self.host_triplet} "
+                f"--host={self.lfs_triplet} --target={self.lfs_triplet} "
+                f"LDFLAGS_FOR_TARGET=-L{self.root_dir}/gcc-12.2.0/build/{self.lfs_triplet}/libgcc "
+                f"--prefix=/usr --with-build-sysroot={self.root_dir} "
+                "--enable-default-pie --enable-default-ssp --disable-nls "
+                "--disable-multilib --disable-libatomic --disable-libgomp "
+                "--disable-libquadmath --disable-libssp --disable-libvtv "
+                "--enable-languages=c,c++"
+            ]
+            + self.make_destdir
+        )
+
         utils.ensure_symlink("gcc", f"{self.root_dir}/usr/bin/cc")
+
+
+class TempGettext(Package):
+    def _inner_build(self):
+        self._run_commands(["./configure --disable-shared", "make"])
+        for prog in ["msgfmt", "msgmerge", "xgettext"]:
+            shutil.copy(f"gettext-tools/src/{prog}", "/usr/bin")
+
+
+class TempBison(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.8.2",
+                "make",
+                "make install",
+            ]
+        )
+
+
+class TempPerl(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "sh Configure -des -Dprefix=/usr -Dvendorprefix=/usr "
+                "-Dprivlib=/usr/lib/perl5/5.36/core_perl "
+                "-Darchlib=/usr/lib/perl5/5.36/core_perl "
+                "-Dsitelib=/usr/lib/perl5/5.36/site_perl "
+                "-Dsitearch=/usr/lib/perl5/5.36/site_perl "
+                "-Dvendorlib=/usr/lib/perl5/5.36/vendor_perl "
+                "-Dvendorarch=/usr/lib/perl5/5.36/vendor_perl ",
+                "make",
+                "make install",
+            ]
+        )
+
+
+class TempPython(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "Python"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --enable-shared --without-ensurepip",
+                "make",
+                "make install",
+            ]
+        )
+
+
+class TempTexinfo(Package):
+    def _inner_build(self):
+        self._run_commands(["./configure --prefix=/usr", "make", "make install"])
+
+
+class TempUtilLinux(Package):
+    def __init(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "util-linux"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure ADJTIME_PATH=/var/lib/hwclock/adjtime "
+                "--libdir=/usr/lib --docdir=/usr/share/doc/util-linux-2.38.1 "
+                "--disable-chfn-chsh --disable-login --disable-nologin "
+                "--disable-su --disable-setpriv --disable-runuser "
+                "--disable-pylibmount --disable-static --without-python "
+                "runstatedir=/run",
+                "make",
+                "make install",
+            ]
+        )
+
+
+temp_tools_packages = [
+    TempM4,
+    TempNcurses,
+    TempBash,
+    TempCoreutils,
+    TempDiffutils,
+    TempFile,
+    TempFindutils,
+    TempGawk,
+    TempGrep,
+    TempGzip,
+    TempMake,
+    TempPatch,
+    TempSed,
+    TempTar,
+    TempXz,
+    TempBinutils,
+    TempGcc,
+]
+
+chroot_temp_tools_packages = [TempGettext, TempBison, TempPerl, TempPython, TempTexinfo]
+

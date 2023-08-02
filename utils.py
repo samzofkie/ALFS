@@ -1,8 +1,3 @@
-# TODO
-# sed
-# run? os.environ manglin'
-#   quiet run
-
 import os, shutil
 
 

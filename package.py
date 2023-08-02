@@ -1,15 +1,20 @@
 import os, subprocess, shutil, time
-from collections import OrderedDict
 import utils
 
 
-class Phase:
-    # targets = OrderedDict()
+class Package:
     def __init__(self, root, file_tracker):
         self.root_dir = root
         self.file_tracker = file_tracker
-        self.env = os.environ.copy()
-        self.targets = OrderedDict()
+        self.env = {"PATH": "/usr/bin:/usr/sbin", "CC": "gcc"}
+        self.target_name = self._camel_to_snake(self.__class__.__name__)
+        self.search_term = self._clean_target_name(self.target_name)
+
+    @staticmethod
+    def _camel_to_snake(class_name):
+        return "".join(
+            ["_" + c.lower() if c.isupper() else c for c in class_name]
+        ).lstrip("_")
 
     @staticmethod
     def _clean_target_name(target_name):
@@ -63,39 +68,37 @@ class Phase:
     def _run(self, command):
         subprocess.run(command.split(), env=self.env, check=True)
 
-    def _clean_up_build(self, package_name):
+    def _run_commands(self, commands):
+        for command in commands:
+            self._run(command)
+
+    def _clean_up(self, package_name):
         os.chdir(self.root_dir)
         utils.ensure_removal(package_name)
 
-    def _build_package(
-        self, target_name, build_commands, search_term="", build_dir=False
-    ):
-        if self.file_tracker.query_record_existence(target_name):
-            return
-        if not search_term:
-            search_term = self._clean_target_name(target_name)
-        tarball_name = self._search_for_tarball(search_term)
-        package_name = self._package_name_from_tarball(tarball_name)
+    def build(self):
+        if not self.file_tracker.query_record_existence(self.target_name):
+            tarball_name = self._search_for_tarball(self.search_term)
+            package_name = self._package_name_from_tarball(tarball_name)
 
-        self._untar_and_enter_source_dir(tarball_name)
-        start_time = time.time()
+            self._untar_and_enter_source_dir(tarball_name)
+            start_time = time.time()
 
-        self._before_build(target_name)
-        if build_dir:
-            self._create_and_enter_build_dir()
-        for command in build_commands:
-            self._run(command)
-        self._after_build(target_name)
+            self._inner_build()
 
-        self._clean_up_build(package_name)
-        self.file_tracker.record_new_files_since(start_time, target_name)
-
-    def build_phase(self):
-        for target, args in self.targets.items():
-            self._build_package(target, **args)
+            self._clean_up(package_name)
+            self.file_tracker.record_new_files_since(start_time, self.target_name)
 
 
-class PreChrootPhase(Phase):
+def gcc_change_default_64_bit_dir():
+    shutil.copyfile("gcc/config/i386/t-linux64", "gcc/config/i386/t-linux64.orig")
+    utils.modify(
+        "gcc/config/i386/t-linux64",
+        lambda line, _: line.replace("lib64", "lib") if "m64" in line else line,
+    )
+
+
+class PreChrootPackage(Package):
     def __init__(self, root_dir, file_tracker):
         super().__init__(root_dir, file_tracker)
         self.lfs_triplet = "x86_64-lfs-linux-gnu"
@@ -105,6 +108,11 @@ class PreChrootPhase(Phase):
             "PATH": f"{self.root_dir}/tools/bin:/usr/bin",
             "CONFIG_SITE": f"{self.root_dir}/usr/share/config.site",
         }
+        self.config_prefix_host = f"./configure --prefix=/usr --host={self.lfs_triplet}"
+        self.config_prefix_host_build = (
+            self.config_prefix_host + f" --build={self.host_triplet}"
+        )
+        self.make_destdir = ["make", f"make DESTDIR={self.root_dir} install"]
 
     def _common_gcc_before(self):
         for dep in ["mpfr", "gmp", "mpc"]:
@@ -116,9 +124,5 @@ class PreChrootPhase(Phase):
                 capture_output=True,
             )
             self._run(f"mv {package_name} {dep}")
+        gcc_change_default_64_bit_dir()
 
-        shutil.copyfile("gcc/config/i386/t-linux64", "gcc/config/i386/t-linux64.orig")
-        utils.modify(
-            "gcc/config/i386/t-linux64",
-            lambda line, _: line.replace("lib64", "lib") if "m64" in line else line,
-        )

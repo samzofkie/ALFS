@@ -2,11 +2,12 @@
 
 import os, subprocess, shutil, time, stat
 from urllib.request import urlopen
+
 import utils
-from cross_toolchain import CrossToolchainBuild
-from temp_tools import TempToolsBuild
-from chroot_temp_tools import ChrootTempToolsBuild
-from main_build import MainBuild
+from clean import remove_source_dirs
+from cross_toolchain import cross_toolchain_packages
+from temp_tools import temp_tools_packages, chroot_temp_tools_packages
+from main_build import main_build_packages
 
 SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
 
@@ -47,6 +48,7 @@ def _ensure_tarballs_downloaded():
 
 
 def setup():
+    remove_source_dirs()
     _ensure_wget_list()
     _ensure_directory_skeleton()
     _ensure_tarballs_downloaded()
@@ -150,7 +152,7 @@ def _make_additional_dirs():
 
     for d in chroot_dirs:
         utils.ensure_dir(d)
-    
+
     utils.ensure_symlink("/run", "/var/run")
     utils.ensure_symlink("/run/lock", "/var/lock")
 
@@ -194,11 +196,16 @@ if __name__ == "__main__":
     setup()
     base_dir = os.getcwd()
     ft = FileTracker(base_dir)
-    CrossToolchainBuild(base_dir, ft).build_phase()
-    TempToolsBuild(base_dir, ft).build_phase()
+    for package in cross_toolchain_packages + temp_tools_packages:
+        package(base_dir, ft).build()
+
     prepare_and_enter_chroot(base_dir)
     base_dir = "/"
     ft.root_dir = "/"
-    ChrootTempToolsBuild(base_dir, ft).build_phase()
+    for package in chroot_temp_tools_packages:
+        package(base_dir, ft).build()
+
     clean_temp_system()
-    MainBuild(base_dir, ft).build_phase()
+
+    for package in main_build_packages:
+        package(base_dir, ft).build()

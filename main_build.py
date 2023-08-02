@@ -1,209 +1,51 @@
-import os, shutil, subprocess
-from phase import Phase
+import os, shutil, subprocess, sys
+
+from package import Package, gcc_change_default_64_bit_dir
 import utils
 
 
-class MainBuild(Phase):
-    def __init__(self, root_dir, file_tracker):
-        super().__init__(root_dir, file_tracker)
-        self.env = {"PATH": "/usr/bin:/usr/sbin", "CC": "gcc"}
+class ManPages(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "man-pages"
 
-        self.targets["man-pages"] = {"build_commands": ["make prefix=/usr install"]}
-        self.targets["iana-etc"] = {"build_commands": []}
-        self.targets["glibc"] = {
-            "build_commands": [
-                "../configure --prefix=/usr --disable-werror "
-                "--enable-kernel=3.2 --enable-stack-protector=strong "
-                "--with-headers=/usr/include libc_cv_slibdir=/usr/lib ",
-                "make",
-            ],
-            "build_dir": True,
-        }
-        self.targets["zlib"] = {
-            "build_commands": [
-                "./configure --prefix=/usr",
-                "make",
-                "make check",
-                "make install",
-            ]
-        }
-        self.targets["bzip2"] = {
-            "build_commands": [
-                "make -f Makefile-libbz2_so",
-                "make clean",
-                "make",
-                "make PREFIX=/usr install",
-            ]
-        }
-        self.targets["xz"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static "
-                "--docdir=/usr/share/doc/xz-5.4.1",
-                "make",
-                "make check",
-                "make install",
-            ]
-        }
-        self.targets["zstd"] = {
-            "build_commands": [
-                "make prefix=/usr",
-                "make check",
-                "make prefix=/usr install",
-            ]
-        }
-        self.targets["file"] = {
-            "build_commands": [
-                "./configure --prefix=/usr",
-                "make",
-                "make check",
-                "make install",
-            ]
-        }
-        self.targets["readline"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static --with-curses "
-                "--docdir=/usr/share/doc/readline-8.2",
-                'make SHLIB_LIBS="-lncursesw"',
-                'make SHLIB_LIBS="-lncursesw" install',
-            ]
-        }
-        self.targets["m4"] = {
-            "build_commands": [
-                "./configure --prefix=/usr",
-                "make",
-                # "make check",
-                "make install",
-            ]
-        }
-        self.targets["bc"] = {
-            "build_commands": [
-                "./configure --prefix=/usr -G -O3 -r",
-                "make",
-                "make test",
-                "make install",
-            ]
-        }
-        self.targets["flex"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.4 "
-                "--disable-static",
-                "make",
-                "make check",
-                "make install",
-            ]
-        }
-        self.targets["tcl"] = {"build_commands": ["make test", "make install"]}
-        self.targets["expect"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --with-tcl=/usr/lib --enable-shared "
-                "--mandir=/usr/share/man --with-tclinclude=/usr/include",
-                "make",
-                "make test",
-                "make install",
-            ]
-        }
-        self.targets["dejagnu"] = {
-            "build_commands": [
-                "../configure --prefix=/usr",
-                "makeinfo --html --no-split -o doc/dejagnu.html " "../doc/dejagnu.texi",
-                "makeinfo --plaintext -o doc/dejagnu.txt  ../doc/dejagnu.texi",
-                "make install",
-                "install -v -dm755 /usr/share/doc/dejagnu-1.6.3",
-                "install -v -m644 doc/dejagnu.html doc/dejagnu.txt "
-                "/usr/share/doc/dejagnu-1.6.3",
-                "make check",
-            ],
-            "build_dir": True,
-        }
-        self.targets["binutils"] = {
-            "build_commands": [
-                "../configure --prefix=/usr --sysconfdir=/etc --enable-gold "
-                "--enable-ld=default --enable-plugins --enable-shared "
-                "--disable-werror --enable-64-bit-bfd --with-system-zlib",
-                "make tooldir=/usr",
-                # "make -k check",
-                "make tooldir=/usr install",
-            ],
-            "build_dir": True,
-        }
-        make_html_check_install = [
-            "make",
-            "make html",
-            "make check",
-            "make install",
-            "make install-html",
-        ]
-        self.targets["gmp"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --enable-cxx --disable-static "
-                "--docdir=/usr/share/doc/gmp-6.2.1",
-            ]
-            + make_html_check_install
-        }
-        self.targets["mpfr"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static "
-                "--enable-thread-safe --docdir=/usr/share/doc/mpfr-4.2.0",
-            ]
-            + make_html_check_install
-        }
-        self.targets["mpc"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static "
-                "--docdir=/usr/share/doc/mpc-1.3.1"
-            ]
-            + make_html_check_install
-        }
-        self.targets["attr"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static  --sysconfdir=/etc "
-                "--docdir=/usr/share/doc/attr-2.5.1",
-                "make",
-                "make check",
-                "make install",
-            ]
-        }
-        self.targets["acl"] = {
-            "build_commands": [
-                "./configure --prefix=/usr --disable-static "
-                "--docdir=/usr/share/doc/acl-2.3.1",
-                "make",
-                "make install",
-            ]
-        }
-        self.targets["libcap"] = {
-            "build_commands": [
-                "make prefix=/usr lib=lib",
-                "make test",
-                "make prefix=/usr lib=lib install",
-            ]
-        }
-        self.targets["shadow"] = {
-            "build_commands": [
-                "./configure --sysconfdir=/etc --disable-static "
-                "--with-group-name-max-length=32",
-                "make",
-                "make exec_prefix=/usr install",
-                "make -C man install-man",
-            ]
-        }
+    def _inner_build(self):
+        self._run("make prefix=/usr install")
 
-    def _iana_etc_after(self):
+
+class IanaEtc(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "iana-etc"
+
+    def _inner_build(self):
         shutil.copy("services", "/etc")
         shutil.copy("protocols", "/etc")
 
-    def _glibc_before(self):
-        self._run("patch -Np1 -i /sources/glibc-2.37-fhs-1.patch") 
+
+class Glibc(Package):
+    def _inner_build(self):
+        self._run("patch -Np1 -i /sources/glibc-2.37-fhs-1.patch")
         utils.modify(
             "stdio-common/vfprintf-process-arg.c",
             lambda line, i: line.replace("workend - string", "number_length")
             if i == 256
             else line,
         )
-        utils.ensure_dir("build")
-        utils.write_file("build/configparms", ["rootsbindir=/usr/sbin"])
 
-    def _glibc_after(self):
+        self._create_and_enter_build_dir()
+
+        utils.write_file("configparms", ["rootsbindir=/usr/sbin"])
+
+        self._run_commands(
+            [
+                "../configure --prefix=/usr --disable-werror "
+                "--enable-kernel=3.2 --enable-stack-protector=strong "
+                "--with-headers=/usr/include libc_cv_slibdir=/usr/lib ",
+                "make",
+            ]
+        )
+
         utils.ensure_touch("/etc/ld.so.conf")
         utils.modify(
             "../Makefile",
@@ -249,10 +91,22 @@ class MainBuild(Phase):
         utils.ensure_symlink("/usr/share/zoneinfo/Chicago", "/etc/localtime")
         utils.write_file("/etc/ld.so.conf", ["/usr/local/lib\n", "/opt/lib\n"])
 
-    def _zlib_after(self):
+
+class Zlib(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
         utils.ensure_removal("/usr/lib/libz.a")
 
-    def _bzip2_before(self):
+
+class Bzip2(Package):
+    def _inner_build(self):
         self._run("patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch")
         utils.modify(
             "Makefile",
@@ -267,7 +121,15 @@ class MainBuild(Phase):
             else line,
         )
 
-    def _bzip2_after(self):
+        self._run_commands(
+            [
+                "make -f Makefile-libbz2_so",
+                "make clean",
+                "make",
+                "make PREFIX=/usr install",
+            ]
+        )
+
         shutil.copy("libbz2.so.1.0.8", "/usr/lib")
         utils.ensure_symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so.1.0")
         utils.ensure_symlink("libbz2.so.1.0.8", "/usr/lib/libbz2.so")
@@ -277,15 +139,49 @@ class MainBuild(Phase):
             utils.ensure_symlink("bzip2", f"/usr/bin/{binary}")
         utils.ensure_removal("/usr/lib/libbz2.a")
 
-    def _zstd_after(self):
+
+class Xz(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--docdir=/usr/share/doc/xz-5.4.1",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Zstd(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "make prefix=/usr",
+                "make check",
+                "make prefix=/usr install",
+            ]
+        )
         utils.ensure_removal("/usr/lib/libzstd.a")
 
-    def _readline_before(self):
+
+class File(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Readline(Package):
+    def _inner_build(self):
         utils.modify(
             "Makefile.in",
-            lambda line, _: ""
-            if "MV" in line and line[-5:] == ".old\n"
-            else line,
+            lambda line, _: "" if "MV" in line and line[-5:] == ".old\n" else line,
         )
         utils.modify(
             "support/shlib-install",
@@ -293,7 +189,14 @@ class MainBuild(Phase):
         )
         self._run("patch -Np1 -i /sources/readline-8.2-upstream_fix-1.patch")
 
-    def _readline_after(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static --with-curses "
+                "--docdir=/usr/share/doc/readline-8.2",
+                'make SHLIB_LIBS="-lncursesw"',
+                'make SHLIB_LIBS="-lncursesw" install',
+            ]
+        )
         for file in os.listdir("doc"):
             for suffix in ["ps", "pdf", "html", "dvi"]:
                 if file[-(len(suffix) + 1) :] == f".{suffix}":
@@ -301,10 +204,47 @@ class MainBuild(Phase):
                         f"install -v -m644 doc/{file} " "/usr/share/doc/readline-8.2"
                     )
 
-    def _flex_after(self):
+
+class M4(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                # "make check",
+                "make install",
+            ]
+        )
+
+
+class Bc(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr -G -O3 -r",
+                "make",
+                "make test",
+                "make install",
+            ]
+        )
+
+
+class Flex(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.4 "
+                "--disable-static",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
         utils.ensure_symlink("flex", "/usr/bin/lex")
 
-    def _tcl_before(self):
+
+class Tcl(Package):
+    def _inner_build(self):
         os.chdir("unix")
         self._run("./configure --prefix=/usr --mandir=/usr/share/man")
         self._run("make")
@@ -332,17 +272,83 @@ class MainBuild(Phase):
                 "pkgs/itcl4.2.3/itclConfig.sh", lambda line, _: line.replace(old, new)
             )
 
-    def _tcl_after(self):
+        self._run_commands(["make", "make test", "make install"])
+
         os.chmod("/usr/lib/libtcl8.6.so", 0o755)
         self._run("make install-private-headers")
         utils.ensure_symlink("tclsh8.6", "/usr/bin/tclsh")
         shutil.move("/usr/share/man/man3/Thread.3", "/usr/share/man/man3/Tcl_Thread.3")
 
-    def _expect_after(self):
-        utils.ensure_symlink("expect5.45.4/libexpect5.45.4.so",
-                             "/usr/lib/libexpect5.45.4.so")
 
-    def _binutils_after(self):
+class Expect(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --with-tcl=/usr/lib --enable-shared "
+                "--mandir=/usr/share/man --with-tclinclude=/usr/include",
+                "make",
+                "make test",
+                "make install",
+            ]
+        )
+        utils.ensure_symlink(
+            "expect5.45.4/libexpect5.45.4.so", "/usr/lib/libexpect5.45.4.so"
+        )
+
+
+class Dejagnu(Package):
+    def _inner_build(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                "../configure --prefix=/usr",
+                "makeinfo --html --no-split -o doc/dejagnu.html " "../doc/dejagnu.texi",
+                "makeinfo --plaintext -o doc/dejagnu.txt  ../doc/dejagnu.texi",
+                "make install",
+                "install -v -dm755 /usr/share/doc/dejagnu-1.6.3",
+                "install -v -m644 doc/dejagnu.html doc/dejagnu.txt "
+                "/usr/share/doc/dejagnu-1.6.3",
+                "make check",
+            ]
+        )
+
+
+class Binutils(Package):
+    def _inner_build(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                "../configure --prefix=/usr --sysconfdir=/etc --enable-gold "
+                "--enable-ld=default --enable-plugins --enable-shared "
+                "--disable-werror --enable-64-bit-bfd --with-system-zlib",
+                "make tooldir=/usr",
+            ]
+        )
+
+        subprocess.run("make -k check".split(), env=self.env)
+        errors = {}
+        for root, dirs, files in os.walk("."):
+            for file in files:
+                if file[-4:] == ".log":
+                    failed_tests = [
+                        line
+                        for line in utils.read_file(f"{root}/{file}")
+                        if line[:5] == "FAIL:"
+                    ]
+                    if failed_tests:
+                        errors[f"{root}/{file}"] = failed_tests
+        if len(errors) > 1:
+            sys.exit(f"More than one logfile reported errors: {errors}")
+        test_suite_errs = errors.get("./gold/testsuite/test-suite.log")
+        if test_suite_errs:
+            if len(test_suite_errs) > 12:
+                sys.exit(
+                    "More than the anticipated 12 errors in "
+                    "gold/testsuite/test-suite.log"
+                )
+
+        self._run("make tooldir=/usr install")
+
         for name in ["bfd", "ctf", "ctf-nobfd", "sframe", "opcodes"]:
             utils.ensure_removal(f"/usr/lib/lib{name}.a")
         utils.ensure_removal("/usr/share/man/man1/gprofng.1")
@@ -350,19 +356,100 @@ class MainBuild(Phase):
             if file[:3] == "gp-" and file[-2:] == ".1":
                 utils.ensure_removal(f"/usr/share/man/man1/{file}")
 
-    def _mpfr_before(self):
-        utils.modify(
-            "tests/tsprintf.c",
-            lambda line, _: line.replace("+01,234,567", "+1,234,567   ").replace("13.10Pd", "13Pd")
+
+class Gmp(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --enable-cxx --disable-static "
+                "--docdir=/usr/share/doc/gmp-6.2.1",
+                "make",
+                "make html",
+                "make check",
+                "make install",
+                "make install-html",
+            ]
         )
 
-    def _libcap_before(self):
+
+class Mpfr(Package):
+    def _inner_build(self):
+        utils.modify(
+            "tests/tsprintf.c",
+            lambda line, _: line.replace("+01,234,567", "+1,234,567   ").replace(
+                "13.10Pd", "13Pd"
+            ),
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--enable-thread-safe --docdir=/usr/share/doc/mpfr-4.2.0",
+                "make",
+                "make html",
+                "make check",
+                "make install",
+                "make install-html",
+            ]
+        )
+
+
+class Mpc(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--docdir=/usr/share/doc/mpc-1.3.1"
+                "make",
+                "make html",
+                "make check",
+                "make install",
+                "make install-html",
+            ]
+        )
+
+
+class Attr(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static  --sysconfdir=/etc "
+                "--docdir=/usr/share/doc/attr-2.5.1",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Acl(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--docdir=/usr/share/doc/acl-2.3.1",
+                "make",
+                "make install",
+            ]
+        )
+
+
+class Libcap(Package):
+    def _inner_build(self):
         utils.modify(
             "libcap/Makefile",
             lambda line, _: "" if "install -m" in line and "$(STA" in line else line,
         )
+        self._run_commands(
+            [
+                "make prefix=/usr lib=lib",
+                "make test",
+                "make prefix=/usr lib=lib install",
+            ]
+        )
 
-    def _shadow_before(self):
+
+class Shadow(Package):
+    def _inner_build(self):
         utils.modify(
             "src/Makefile.in", lambda line, _: line.replace("groups$(EXEEXT)", "")
         )
@@ -392,6 +479,42 @@ class MainBuild(Phase):
             utils.modify("etc/login.defs", lambda line, _: line.replace(old, new))
         utils.ensure_touch("/usr/bin/passwd")
 
-    def _shadow_after(self):
-        self._run("pwconv")
-        self._run("grpconv")
+        self._run_commands(
+            [
+                "./configure --sysconfdir=/etc --disable-static "
+                "--with-group-name-max-length=32",
+                "make",
+                "make exec_prefix=/usr install",
+                "make -C man install-man",
+                "pwconv",
+                "grpconv",
+            ]
+        )
+
+
+main_build_packages = [
+    ManPages,
+    IanaEtc,
+    Glibc,
+    Zlib,
+    Bzip2,
+    Xz,
+    Zstd,
+    File,
+    Readline,
+    M4,
+    Bc,
+    Flex,
+    Tcl,
+    Expect,
+    Dejagnu,
+    Binutils,
+    Gmp,
+    Mpfr,
+    Mpc,
+    Attr,
+    Acl,
+    Libcap,
+    Shadow,
+]
+

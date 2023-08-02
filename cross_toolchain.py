@@ -1,80 +1,42 @@
 import os, shutil, subprocess
-from phase import PreChrootPhase
+
+from package import PreChrootPackage
 import utils
 
 
-class CrossToolchainBuild(PreChrootPhase):
-    def __init__(self, root_dir, file_tracker):
-        super().__init__(root_dir, file_tracker)
-
-        self.targets["cross_binutils"] = {
-            "build_commands": [
-                (
-                    f"../configure --prefix={self.root_dir}/tools "
-                    f"--with-sysroot={self.root_dir} "
-                    f"--target={self.lfs_triplet} --disable-nls --enable-gprofng=no "
-                    "--disable-werror"
-                ),
+class CrossBinutils(PreChrootPackage):
+    def _inner_build(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f"../configure --prefix={self.root_dir}/tools "
+                f"--with-sysroot={self.root_dir} "
+                f"--target={self.lfs_triplet} --disable-nls --enable-gprofng=no "
+                "--disable-werror",
                 "make",
                 "make install",
-            ],
-            "build_dir": True,
-        }
+            ]
+        )
 
-        self.targets["cross_gcc"] = {
-            "build_commands": [
-                (
-                    f"../configure --target={self.lfs_triplet} --prefix={self.root_dir}/tools "
-                    f"--with-glibc-version=2.37 --with-sysroot={self.root_dir} --with-newlib "
-                    "--without-headers --enable-default-pie --enable-default-ssp "
-                    "--disable-nls --disable-shared --disable-multilib --disable-threads "
-                    "--disable-libatomic --disable-libgomp --disable-libquadmath "
-                    "--disable-libssp --disable-libvtv --disable-libstdcxx "
-                    "--enable-languages=c,c++"
-                ),
-                "make",
-                "make install",
-            ],
-            "build_dir": True,
-        }
 
-        self.targets["linux_headers"] = {
-            "build_commands": ["make mrproper", "make headers"],
-            "search_term": "linux",
-        }
-
-        self.targets["cross_glibc"] = {
-            "build_commands": [
-                (
-                    f"../configure --prefix=/usr --host={self.lfs_triplet} --build={self.host_triplet} "
-                    f"--enable-kernel=3.2 --with-headers={self.root_dir}/usr/include "
-                    "libc_cv_slibdir=/usr/lib"
-                ),
-                "make",
-                f"make DESTDIR={self.root_dir} install",
-            ],
-            "build_dir": True,
-        }
-
-        self.targets["cross_libstdcpp"] = {
-            "build_commands": [
-                (
-                    f"../libstdc++-v3/configure --host={self.lfs_triplet} --build={self.host_triplet} "
-                    "--prefix=/usr --disable-multilib --disable-nls "
-                    "--disable-libstdcxx-pch "
-                    f"--with-gxx-include-dir=/tools/{self.lfs_triplet}/include/c++/12.2.0"
-                ),
-                "make",
-                f"make DESTDIR={self.root_dir} install",
-            ],
-            "search_term": "gcc",
-            "build_dir": True,
-        }
-
-    def _cross_gcc_before(self):
+class CrossGcc(PreChrootPackage):
+    def _inner_build(self):
         self._common_gcc_before()
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f"../configure --target={self.lfs_triplet} --prefix={self.root_dir}/tools "
+                f"--with-glibc-version=2.37 --with-sysroot={self.root_dir} --with-newlib "
+                "--without-headers --enable-default-pie --enable-default-ssp "
+                "--disable-nls --disable-shared --disable-multilib --disable-threads "
+                "--disable-libatomic --disable-libgomp --disable-libquadmath "
+                "--disable-libssp --disable-libvtv --disable-libstdcxx "
+                "--enable-languages=c,c++",
+                "make",
+                "make install",
+            ]
+        )
 
-    def _cross_gcc_after(self):
         os.chdir("..")
         lines = []
         for file in ["gcc/limitx.h", "gcc/glimits.h", "gcc/limity.h"]:
@@ -88,7 +50,14 @@ class CrossToolchainBuild(PreChrootPhase):
         dirname = completed.stdout.decode().rsplit("/", 1)[0]
         utils.write_file(f"{dirname}/install-tools/include/limits.h", lines)
 
-    def _linux_headers_after(self):
+
+class LinuxHeaders(PreChrootPackage):
+    def __init__(self, root, file_tracker):
+        super().__init__(root, file_tracker)
+        self.search_term = "linux"
+
+    def _inner_build(self):
+        self._run_commands(["make mrproper", "make headers"])
         for root, dirs, files in os.walk("usr/include"):
             for file in files:
                 if file[-2:] != ".h":
@@ -98,7 +67,9 @@ class CrossToolchainBuild(PreChrootPhase):
             "usr/include", f"{self.root_dir}/usr/include", dirs_exist_ok=True
         )
 
-    def _cross_glibc_before(self):
+
+class CrossGlibc(PreChrootPackage):
+    def _inner_build(self):
         utils.ensure_symlink(
             "../usr/lib/ld-linux-x86-64.so.2",
             f"{self.root_dir}/lib64/ld-linux-x86-64.so.2",
@@ -111,11 +82,20 @@ class CrossToolchainBuild(PreChrootPhase):
             self._search_for_tarball("glibc")
         )
         self._run(f"patch -Np1 -i {self.root_dir}/sources/{package_name}-fhs-1.patch")
-
         utils.ensure_dir("build")
         utils.write_file("build/configparms", ["rootsbindir=/usr/sbin"])
 
-    def _cross_glibc_after(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f"../configure --prefix=/usr --host={self.lfs_triplet} --build={self.host_triplet} "
+                f"--enable-kernel=3.2 --with-headers={self.root_dir}/usr/include "
+                "libc_cv_slibdir=/usr/lib",
+                "make",
+                f"make DESTDIR={self.root_dir} install",
+            ]
+        )
+
         utils.write_file("main.c", "int main(){}")
         self._run(f"{self.lfs_triplet}-gcc -xc main.c")
         completed_process = subprocess.run(
@@ -130,6 +110,33 @@ class CrossToolchainBuild(PreChrootPhase):
             "install-tools/mkheaders"
         )
 
-    def _cross_libstdcpp_after(self):
+
+class CrossLibstdcpp(PreChrootPackage):
+    def __init__(self, root, file_tracker):
+        super().__init__(root, file_tracker)
+        self.search_term = "gcc"
+
+    def _inner_build(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                f"../libstdc++-v3/configure --host={self.lfs_triplet} "
+                f"--build={self.host_triplet} --prefix=/usr --disable-multilib "
+                "--disable-nls --disable-libstdcxx-pch "
+                f"--with-gxx-include-dir=/tools/{self.lfs_triplet}/include/c++/12.2.0",
+                "make",
+                f"make DESTDIR={self.root_dir} install",
+            ]
+        )
         for name in ["stdc++", "stdc++fs", "supc++"]:
             utils.ensure_removal(f"{self.root_dir}/usr/lib/lib{name}.la")
+
+
+cross_toolchain_packages = [
+    CrossBinutils,
+    CrossGcc,
+    LinuxHeaders,
+    CrossGlibc,
+    CrossLibstdcpp,
+]
+
