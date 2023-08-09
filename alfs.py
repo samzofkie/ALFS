@@ -73,20 +73,18 @@ class FileTracker:
     def _update_recorded_files(self):
         self.recorded_files = self._system_snapshot()
 
-    def _write_file_list(self, target_name, file_list):
-        utils.write_file(
-            f"{self.root_dir}/package-records/{target_name}",
-            sorted("\n".join(file_list)),
-        )
-
     def record_new_files_since(self, start_time, target_name):
         self._update_recorded_files()
+        
         new_files = set()
         for file in self.recorded_files:
-            file_time = os.stat(file).st_mtime
-            if file_time > start_time:
-                new_files.add(file)
-        self._write_file_list(target_name, new_files)
+            if os.stat(file).st_mtime > start_time:
+                new_files.add(file) 
+
+        utils.write_file(
+            f"{self.root_dir}/package-records/{target_name}",
+            sorted([f"{file}\n" for file in new_files]),
+        )
 
     def query_record_existence(self, target_name):
         return os.path.exists(f"{self.root_dir}/package-records/{target_name}")
