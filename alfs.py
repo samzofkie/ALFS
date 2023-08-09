@@ -48,10 +48,10 @@ def _ensure_tarballs_downloaded():
 
 
 def setup():
-    remove_source_dirs()
     _ensure_wget_list()
     _ensure_directory_skeleton()
     _ensure_tarballs_downloaded()
+    remove_source_dirs()
 
 
 class FileTracker:

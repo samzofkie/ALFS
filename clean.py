@@ -48,12 +48,14 @@ def _clean_etc():
 
 def _umount_vkfs():
     """Run outside the chroot please!"""
-    for d in ["dev/pts", "dev", "proc", "sys", "run"]:
+    for d in os.listdir("dev"):
+        subprocess.run(f"umount dev/{d}".split())
+    for d in ["dev", "proc", "sys", "run"]:
         subprocess.run(f"umount {d}".split())
 
 
 def clean():
-    _umount_vkfs()
+    #_umount_vkfs()
     remove_source_dirs()
     _remove_sys_dirs()
     _clean_etc()

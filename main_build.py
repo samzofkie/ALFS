@@ -1,4 +1,4 @@
-import os, shutil, subprocess, sys
+import os, shutil, subprocess, sys, re
 
 from package import Package, gcc_change_default_64_bit_dir
 import utils
@@ -492,6 +492,103 @@ class Shadow(Package):
         )
 
 
+# Takes 8 hours!
+class Gcc(Package):
+    def _inner_build(self):
+        gcc_change_default_64_bit_dir()
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                "../configure --prefix=/usr LD=ld --enable-languages=c,c++ "
+                "--enable-default-pie --enable-default-ssp --disable-multilib "
+                "--disable-bootstrap --with-system-zlib ",
+                "make"
+            ]
+        )
+        
+        for root, dirs, files in os.walk("."):
+            shutil.chown(root, user="tester")
+            for file in files:
+                shutil.chown(f"{root}/{file}", user="tester")
+        
+        tester_line = [line for line in utils.read_file("/etc/passwd") 
+                       if "tester" in line][0]
+        tester_uid, tester_gid = tester_line.split(":")[2:4]
+        
+        subprocess.run("make -k check".split(), env=self.env, user=int(tester_uid),
+                       group=int(tester_gid))
+        
+        report = subprocess.run("../contrib/test_summary".split(),
+                                   check=True, env=self.env,
+                                   capture_output=True).stdout.decode()
+        utils.write_file("/gcc-report", [f"{line}\n" 
+                                         for line in report.split("\n")])
+        
+        self._run("make install")
+ 
+        triplet = subprocess.run("gcc -dumpmachine".split(), check=True, env=self.env,
+                                 capture_output=True).stdout.decode().strip()
+        for suffix in ["", "-fixed"]:
+            for root, dirs, files in os.walk(f"/usr/lib/gcc/{triplet}/12.2.0/include{suffix}"):
+                for file in files:
+                    shutil.chown(f"{root}/{file}", user="root", group="root")
+        
+        utils.ensure_symlink("../bin/cpp", "/usr/lib/cpp")
+        utils.ensure_symlink(f"../../libexec/gcc/{triplet}/12.2.0/liblto_plugin.so",
+                             f"/usr/lib/bfd-plugins")
+
+        utils.write_file("dummy.c", "int main(){}")
+        cc_output = subprocess.run("cc dummy.c -v -Wl,--verbose".split(),
+                                   env=self.env, check=True,
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.STDOUT).stdout.decode()
+        
+        utils.write_file("dummy.log", [f"{line}\n" for line in
+                                       cc_output.split("\n")])
+        assert (
+            "[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]"
+            in subprocess.run("readelf -l a.out".split(), env=self.env,
+                              check=True, capture_output=True).stdout.decode()
+        )
+
+        dummy_log = utils.read_file("dummy.log")
+
+        assert len(re.findall(r'/usr/lib/gcc.*/S?crt[1in].*succeeded',
+                              "".join(dummy_log))) >= 3
+        
+        begin_index = dummy_log.index("#include <...> search starts here:\n") + 1
+        include_paths = [path.strip() for path in 
+                         dummy_log[begin_index:begin_index+4]]
+        for path in [f"/usr/lib/gcc/{triplet}/12.2.0/include",
+                     "/usr/local/include",
+                     f"/usr/lib/gcc/{triplet}/12.2.0/include-fixed",
+                     "/usr/include"]:
+            assert path in include_paths
+
+        linker_paths = re.findall(r'SEARCH.*/usr/lib',
+                                  "".join(dummy_log))[0].split("; ")
+        linker_paths = [path.split('"')[1] for path in linker_paths]
+        for path in [f"/usr/{triplet}/lib64",
+                     "/usr/local/lib64",
+                     "/lib64",
+                     "/usr/lib64",
+                     f"/usr/{triplet}/lib",
+                     "/usr/local/lib",
+                     "/lib",
+                     "/usr/lib"]:
+            assert path in linker_paths
+
+        assert "attempt to open /usr/lib/libc.so.6 succeeded\n" in dummy_log
+        assert ("found ld-linux-x86-64.so.2 at /usr/lib/ld-linux-x86-64.so.2\n"
+                in dummy_log)
+        
+        utils.ensure_dir("/usr/share/gdb/auto-load/usr/lib")
+        for file in os.listdir("/usr/lib"):
+            if file[-6:] == "gdb.py":
+                shutil.move(f"/usr/lib/{file}", 
+                            "/usr/share/gdb/auto-load/usr/lib")
+
+
 main_build_packages = [
     ManPages,
     IanaEtc,
@@ -516,5 +613,6 @@ main_build_packages = [
     Acl,
     Libcap,
     Shadow,
+    Gcc,
 ]
 
