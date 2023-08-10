@@ -876,6 +876,26 @@ class Autoconf(Package):
         )
 
 
+class Openssl(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib "
+                "shared zlib-dynamic ",
+                "make",
+                "make test",
+            ]
+        )
+        utils.modify(
+            "Makefile",
+            lambda line, _: line.replace("libcrypto.a libssl.a", "") 
+                if "INSTALL_LIBS" in line else line
+        )
+        self._run("make MANSUFFIX=ssl install")
+        os.rename("/usr/share/doc/openssl", "/usr/share/doc/openssl-3.0.8")
+        shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8")
+
+
 class Automake(Package):
     def _inner_build(self):
         self._run_commands(
@@ -887,6 +907,207 @@ class Automake(Package):
                 "make install"
             ]
         )
+
+
+class Kmod(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --sysconfdir=/etc --with-openssl "
+                "--with-xz --with-zstd --with-zlib",
+                "make",
+                "make install"
+            ]
+        )
+        for target in ["depmod", "insmod", "modinfo", "modprobe", "rmmod"]:
+            utils.ensure_symlink("../bin/kmod", f"/usr/sbin/{target}")
+        utils.ensure_symlink("kmod", "/usr/bin/lsmod")
+
+
+class Elfutils(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-debuginfod "
+                "--enable-libdebuginfod=dummy",
+                "make",
+                #"make check",
+                "make -C libelf install",
+                "install -vm644 config/libelf.pc /usr/lib/pkgconfig",
+            ]
+        )
+        utils.ensure_removal("/usr/lib/libelf.a")
+
+
+class Libffi(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--with-gcc-arch=native",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Python(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "Python"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --enable-shared --with-system-expat "
+                "--with-system-ffi --enable-optimizations",
+                "make",
+                "make install",
+                "install -v -dm755 /usr/share/doc/python-3.11.2/html",
+                "tar --strip-components=1 --no-same-owner --no-same-permissions "
+                "-C /usr/share/doc/python-3.11.2/html -xvf "
+                "/sources/python-3.11.2-docs-html.tar.bz2",
+            ]
+        )
+
+
+class Wheel(Package):
+    def _inner_build(self):
+        self.env["PYTHONPATH"] = "src"
+        self._run_commands(
+            [
+                "pip3 wheel -w dist --no-build-isolation --no-deps "
+                f"{os.getcwd()}",
+                "pip3 install --no-index --find-links=dist wheel"
+            ]
+        )
+        del self.env["PYTHONPATH"]
+
+
+class Ninja(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "python3 configure.py --bootstrap",
+                "./ninja ninja_test",
+                "./ninja_test --gtest_filter=-SubprocessTest.SetWithLots",
+                "install -vm755 ninja /usr/bin/",
+                "install -vDm644 misc/bash-completion "
+                "/usr/share/bash-completion/completions/ninja",
+                "install -vDm644 misc/zsh-completion  "
+                "/usr/share/zsh/site-functions/_ninja",
+            ]
+        )
+
+
+class Meson(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "pip3 wheel -w dist --no-build-isolation --no-deps "
+                f"{os.getpwd()}",
+                "pip3 install --no-index --find-links dist meson",
+                "install -vDm644 data/shell-completions/bash/meson "
+                "/usr/share/bash-completion/completions/meson",
+                "install -vDm644 data/shell-completions/zsh/_meson "
+                "/usr/share/zsh/site-functions/_meson",
+            ]
+        )
+
+
+class Coreutils(Package):
+    def _inner_build(self):
+        self.env["FORCE_UNSAFE_CONFIGURE"] = 1 
+        self._run_commands(
+            [
+                "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
+                "autoreconf -fiv",
+                "./configure --prefix=/usr "
+                "--enable-no-install-program=kill,uptime ",
+                "make",
+                "make NON_ROOT_USERNAME=tester check-root",
+            ]
+        )
+        del self.env["FORCE_UNSAFE_CONFIGURE"]
+        utils.write_file(
+            "/etc/group",
+            utils.read_file("/etc/group") + ["dummy:x:102:tester"]
+        )
+        utils.chown_tree(".", "tester")
+        self._run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
+        utils.write_file(
+            "/etc/group",
+            utils.read_file("/etc/group")[:-1]
+        )
+        self._run("make install")
+        shutil.move("/usr/bin/chroot", "/usr/sbin")
+        shutil.move("/usr/share/man/man1/chroot.1",
+                    "/usr/share/man/man8/chroot.8")
+        utils.modify(
+            "/usr/share/man/man8/chroot.8",
+            lambda line, _: line.replace('"1"', '"8"')
+        )
+
+
+class Check(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static",
+                "make",
+                "make check",
+                "make docdir=/usr/share/doc/check-0.15.2 install"
+            ]
+        )
+
+
+class Diffutils(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install"
+            ]
+        )
+
+
+class Gawk(Package):
+    def _inner_build(self):
+        utils.modify(
+            "Makefile.in",
+            lambda line, _: line.replace("extras", "")
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+            ]
+        )
+        subprocess.run(["make", "LN='ln -f'", "install"], check=True,
+                       env=self.env)
+        utils.ensure_dir("/usr/share/doc/gawk-5.2.1")
+        shutil.copy("doc/awkforai.txt", "/usr/share/doc/gawk-5.2.1")
+        for file in os.listdir("doc"):
+            if file[-4:] in [".eps", ".pdf", ".jpg"]:
+                shutil.copy(f"doc/{file}", "/usr/share/doc/gawk-5.2.1")
+
+
+class Findutils(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --localstatedir=/var/lib/locate",
+                "make"
+            ]
+        )
+        utils.chown_tree(".", "tester")
+        self._run_as_tester("make check")
+        self._run("make install")
+
 
 
 main_build_packages = [
@@ -932,5 +1153,19 @@ main_build_packages = [
     XmlParser,
     Intltool,
     Autoconf,
+    Openssl,
+    Automake,
+    Kmod,
+    Elfutils,
+    Libffi,
+    Python,
+    Wheel,
+    Ninja,
+    Meson,
+    Coreutils,
+    Check,
+    Diffutils,
+    Gawk,
+    Findutils,
 ]
 
