@@ -506,17 +506,8 @@ class Gcc(Package):
             ]
         )
         
-        for root, dirs, files in os.walk("."):
-            shutil.chown(root, user="tester")
-            for file in files:
-                shutil.chown(f"{root}/{file}", user="tester")
-        
-        tester_line = [line for line in utils.read_file("/etc/passwd") 
-                       if "tester" in line][0]
-        tester_uid, tester_gid = tester_line.split(":")[2:4]
-        
-        subprocess.run("make -k check".split(), env=self.env, user=int(tester_uid),
-                       group=int(tester_gid))
+        utils.chown_tree(".", "tester")        
+        self._run_as_tester("make -k check")
         
         report = subprocess.run("../contrib/test_summary".split(),
                                    check=True, env=self.env,
@@ -589,6 +580,315 @@ class Gcc(Package):
                             "/usr/share/gdb/auto-load/usr/lib")
 
 
+class PkgConfig(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "pkg-config"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --with-internal-glib "
+                "--disable-host-tool --docdir=/usr/share/doc/pkg-config-0.29.2",
+                "make",
+                "make check",
+                "make install"
+            ]
+        )
+
+
+class Ncurses(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --mandir=/usr/share/man "
+                "--with-shared --without-debug --without-normal "
+                "--with-cxx-shared --enable-pc-files --enable-widec "
+                "--with-pkg-config-libdir=/usr/lib/pkgconfig ",
+                "make",
+                "make install"
+            ]
+        )
+        for name in ["curses", "form", "panel", "menu"]:
+            utils.ensure_removal(f"/usr/lib/lib{name}.so")
+            utils.write_file(f"/usr/lib/lib{name}.so", [f"INPUT(-l{name}w)"])
+            utils.ensure_symlink(f"{name}w.pc", f"/usr/lib/pkgconfig/{name}.pc")
+        utils.ensure_removal("/usr/lib/libcursesw.so")
+        utils.write_file(f"/usr/lib/libcursesw.so", [f"INPUT(-lncursesw)"])
+        
+        utils.ensure_removal(f"/usr/lib/libcurses.so")
+        utils.ensure_symlink(f"libncurses.so", "/usr/lib/libcurses.so")
+        
+        utils.ensure_dir("/usr/share/doc/ncurses-6.4")
+        shutil.copytree("doc", "/usr/share/doc/ncurses-6.4", dirs_exist_ok=True)
+
+
+class Sed(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make html",
+            ]
+        )
+        utils.chown_tree(".", "tester")
+        self._run_as_tester("make check")
+        self._run_commands(
+            [
+                "make install",
+                "install -d -m755 /usr/share/doc/sed-4.9",
+                "install -m644 doc/sed.html /usr/share/doc/sed-4.9",
+            ]
+        )
+
+
+class Psmisc(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make install"
+            ]
+        )
+
+
+class Gettext(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--docdir=/usr/share/doc/gettext-0.21.1 ",
+                "make",
+                #"make check",
+                "make install"
+            ]
+        )
+        os.chmod("/usr/lib/preloadable_libintl.so", 0o755)
+
+
+class Bison(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.8.2",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Grep(Package):
+    def _inner_build(self):
+        utils.modify(
+            "src/egrep.sh",
+            lambda line, _: line.replace("echo", "#echo")
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                #"make check",
+                "make install",
+            ]
+        )
+
+
+class Bash(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --without-bash-malloc "
+                "--with-installed-readline --docdir=/usr/share/doc/bash-5.2.15",
+                "make",
+            ]
+        )
+        utils.chown_tree(".", "tester")
+        self._run_as_tester("make tests")
+        self._run("make install")
+
+
+class Libtool(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr ",
+                "make",
+                #"make -k check",
+                "make install",
+            ]
+        )
+        utils.ensure_removal("/usr/lib/libltdl.a")
+
+
+class Gdbm(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--enable-libgdbm-compat",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Gperf(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1",
+                "make",
+                "make -j1 check",
+                "make install",
+            ]
+        )
+
+
+class Expat(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static "
+                "--docdir=/usr/share/doc/expat-2.5.0",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+        for file in os.listdir("doc"):
+            if file[-5:] == ".html" or file[-4:] == ".css":
+                self._run(f"install -v -m644 doc/{file} /usr/share/doc/expat-2.5.0")
+
+
+class Inetutils(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --bindir=/usr/bin "
+                "--localstatedir=/var --disable-logger --disable-whois "
+                "--disable-rcp --disable-rexec --disable-rlogin --disable-rsh "
+                "--disable-servers ",
+                "make",
+                #"make check",
+                "make install"
+            ]
+        )
+        if not os.path.exists("/usr/sbin/ifconfig"):
+            shutil.move("/usr/bin/ifconfig", "/usr/sbin/ifconfig")
+
+
+class Less(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --sysconfdir=/etc",
+                "make",
+                "make install"
+            ]
+        )
+
+
+class Perl(Package):
+    def _inner_build(self):
+        self.env["BUILD_ZLIB"] = "False"
+        self.env["BUILD_BZIP2"] = "0"
+        config_command = (
+            "sh Configure -des -Dprefix=/usr -Dvendorprefix=/usr "
+            "-Dprivlib=/usr/lib/perl5/5.36/core_perl "
+            "-Darchlib=/usr/lib/perl5/5.36/core_perl "
+            "-Dsitelib=/usr/lib/perl5/5.36/site_perl "
+            "-Dsitearch=/usr/lib/perl5/5.36/site_perl "
+            "-Dvendorlib=/usr/lib/perl5/5.36/vendor_perl "
+            "-Dvendorarch=/usr/lib/perl5/5.36/vendor_perl "
+            "-Dman1dir=/usr/share/man/man1 "
+            "-Dman3dir=/usr/share/man/man3 "
+            '-Dpager="/usr/bin/less-isR" '
+            "-Duseshrplib -Dusethreads ").split()
+        config_command[-3] = '-Dpager="/usr/bin/less -isR"'
+        subprocess.run(config_command, env=self.env, check=True)
+        self._run_commands(
+            [
+                "make",
+                #"make test",
+                "make install",
+            ]
+        ) 
+        del self.env["BUILD_ZLIB"]
+        del self.env["BUILD_BZIP2"]
+
+
+class XmlParser(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "XML-Parser"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "perl Makefile.PL",
+                "make",
+                "make test",
+                "make install"
+            ]
+        )
+
+
+class Intltool(Package):
+    def _inner_build(self):
+        utils.modify(
+            "intltool-update.in",
+            lambda line, _: line.replace("\${", "\$\{")
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+                "install -v -Dm644 doc/I18N-HOWTO /usr/share/doc/intltool-0.51.0/I18N-HOWTO"
+            ]
+        )
+
+
+class Autoconf(Package):
+    def _inner_build(self):
+        shutil.copy("tests/local.at", "tests/local.at.orig")
+        utils.modify(
+            "tests/local.at",
+            lambda line, _: line.replace(
+                "|START_TIME|", "|SHLVL|START_TIME|"
+                ).replace(
+                    "/^BASH_ARGV=/ d\n",
+                    "/^BASH_ARGV=/ d\n        /^SHLVL=/ d\n"
+                )
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Automake(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr "
+                "--docdir=/usr/share/doc/automake-1.16.5",
+                "make",
+                #"make -j4 check",
+                "make install"
+            ]
+        )
+
+
 main_build_packages = [
     ManPages,
     IanaEtc,
@@ -614,5 +914,23 @@ main_build_packages = [
     Libcap,
     Shadow,
     Gcc,
+    PkgConfig,
+    Ncurses,
+    Sed,
+    Psmisc,
+    Gettext,
+    Bison,
+    Grep,
+    Bash,
+    Libtool,
+    Gdbm,
+    Gperf,
+    Expat,
+    Inetutils,
+    Less,
+    Perl,
+    XmlParser,
+    Intltool,
+    Autoconf,
 ]
 

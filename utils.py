@@ -44,3 +44,11 @@ def modify(filename, function):
     for i in range(len(lines)):
         lines[i] = function(lines[i], i)
     write_file(filename, lines)
+
+
+def chown_tree(root, user_name):
+    for root, _, files in os.walk(root):
+        shutil.chown(root, user=user_name)
+        for file in files:
+            shutil.chown(f"{root}/{file}", user=user_name)
+
