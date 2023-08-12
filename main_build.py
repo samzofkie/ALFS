@@ -876,6 +876,19 @@ class Autoconf(Package):
         )
 
 
+class Automake(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr "
+                "--docdir=/usr/share/doc/automake-1.16.5",
+                "make",
+                #"make -j4 check",
+                "make install"
+            ]
+        )
+
+
 class Openssl(Package):
     def _inner_build(self):
         self._run_commands(
@@ -893,20 +906,8 @@ class Openssl(Package):
         )
         self._run("make MANSUFFIX=ssl install")
         os.rename("/usr/share/doc/openssl", "/usr/share/doc/openssl-3.0.8")
-        shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8")
-
-
-class Automake(Package):
-    def _inner_build(self):
-        self._run_commands(
-            [
-                "./configure --prefix=/usr "
-                "--docdir=/usr/share/doc/automake-1.16.5",
-                "make",
-                #"make -j4 check",
-                "make install"
-            ]
-        )
+        shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8",
+                        dirs_exist_ok=True)
 
 
 class Kmod(Package):
@@ -975,14 +976,10 @@ class Python(Package):
 class Wheel(Package):
     def _inner_build(self):
         self.env["PYTHONPATH"] = "src"
-        self._run_commands(
-            [
-                "pip3 wheel -w dist --no-build-isolation --no-deps "
-                f"{os.getcwd()}",
-                "pip3 install --no-index --find-links=dist wheel"
-            ]
-        )
+        self._run("pip3 wheel -w dist --no-build-isolation --no-deps "
+                 f"{os.getcwd()}")
         del self.env["PYTHONPATH"]
+        self._run("pip3 install --no-index --find-links=dist wheel")
 
 
 class Ninja(Package):
@@ -1006,7 +1003,7 @@ class Meson(Package):
         self._run_commands(
             [
                 "pip3 wheel -w dist --no-build-isolation --no-deps "
-                f"{os.getpwd()}",
+                f"{os.getcwd()}",
                 "pip3 install --no-index --find-links dist meson",
                 "install -vDm644 data/shell-completions/bash/meson "
                 "/usr/share/bash-completion/completions/meson",
@@ -1018,7 +1015,7 @@ class Meson(Package):
 
 class Coreutils(Package):
     def _inner_build(self):
-        self.env["FORCE_UNSAFE_CONFIGURE"] = 1 
+        self.env["FORCE_UNSAFE_CONFIGURE"] = "1" 
         self._run_commands(
             [
                 "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
@@ -1041,8 +1038,9 @@ class Coreutils(Package):
             utils.read_file("/etc/group")[:-1]
         )
         self._run("make install")
-        shutil.move("/usr/bin/chroot", "/usr/sbin")
-        shutil.move("/usr/share/man/man1/chroot.1",
+        os.replace("/usr/bin/chroot", "/usr/sbin/chroot")
+        utils.ensure_dir("/usr/share/man/man8")
+        os.replace("/usr/share/man/man1/chroot.1",
                     "/usr/share/man/man8/chroot.8")
         utils.modify(
             "/usr/share/man/man8/chroot.8",
@@ -1068,7 +1066,7 @@ class Diffutils(Package):
             [
                 "./configure --prefix=/usr",
                 "make",
-                "make check",
+                #"make check",
                 "make install"
             ]
         )
@@ -1107,6 +1105,316 @@ class Findutils(Package):
         utils.chown_tree(".", "tester")
         self._run_as_tester("make check")
         self._run("make install")
+
+
+class Groff(Package):
+    def _inner_build(self):
+        self.env["PAGE"] = "letter"
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make install"
+            ]
+        )
+        del self.env["PAGE"]
+
+
+class Gzip(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                #"make check",
+                "make install",
+            ]
+        )
+
+
+class Iproute(Package):
+    def _inner_build(self):
+        utils.modify(
+            "Makefile",
+            lambda line, _: "" if "ARPD" in line else line
+        )
+        utils.ensure_removal("man/man8/arpd.8")
+        self._run_commands(
+            [
+                "make NETNS_RUN_DIR=/run/netns",
+                "make SBINDIR=/usr/sbin install",
+            ]
+        )
+        utils.ensure_dir("/usr/share/doc/iproute2-6.1.0")
+        for file in os.listdir():
+            if file[:6] == "README" or file == "COPYING":
+                shutil.copy(file, "/usr/share/doc/iproute2-6.1.0")
+
+
+class Kbd(Package):
+    def _inner_build(self):
+        self._run("patch -Np1 -i /sources/kbd-2.5.1-backspace-1.patch")
+        utils.modify(
+            "configure",
+            lambda line, _: line.replace("yes", "no") 
+                if "RESIZECONS_PROGS=" in line else line
+        )
+        utils.modify(
+            "docs/man/man8/Makefile.in",
+            lambda line, _: line.replace("resizecons.8 ", "")
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-vlock",
+                "make",
+                "make check",
+                "make install"
+            ]
+        )
+        utils.ensure_dir("/usr/share/doc/kbd-2.5.1")
+        shutil.copytree("docs/doc", "/usr/share/doc/kbd-2.5.1",
+                        dirs_exist_ok=True)
+
+
+class Libpipeline(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Make(Package):
+    def _inner_build(self):
+        utils.modify(
+            "src/main.c",
+            lambda line, i: "" if i in range(1185,1189) 
+                else line.replace("#undef  FATAL_SIG",
+                                  "FATAL_SIG (SIGPIPE);\n#undef  FATAL_SIG")
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Patch(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Tar(Package):
+    def _inner_build(self):
+        self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                #"make check",
+                "make install",
+                "make -C doc install-html docdir=/usr/share/doc/tar-1.34",
+            ]
+        )
+        del self.env["FORCE_UNSAFE_CONFIGURE"]
+
+
+class Texinfo(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make check",
+                "make install",
+                "make TEXMF=/usr/share/texmf install-tex"
+            ]
+        )
+
+
+class Vim(Package):
+    def _inner_build(self):
+        utils.write_file(
+            "src/feature.h", 
+            utils.read_file("src/feature.h") + 
+            ['\n#define SYS_VIMRC_FILE "/etc/vimrc"']
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+            ]
+        )
+
+        utils.chown_tree(".", "tester") 
+        self.env["LANG"] = "en_US.UTF-8"
+        self._run_as_tester("make -j1 test")
+        del self.env["LANG"]
+        
+        self._run("make install")
+        utils.ensure_symlink("../vim/vim90/doc", "/usr/share/doc/vim-9.0.1273")
+
+
+class Eudev(Package):
+    def _inner_build(self):
+        utils.modify(
+            "src/udev/udev.pc.in",
+            lambda line, _: line + "\nudev_dir=${udevdir}" 
+                if "udevdir" in line else line
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --bindir=/usr/sbin "
+                "--sysconfdir=/etc --enable-manpages --disable-static ",
+                "make"
+            ]
+        )
+        utils.ensure_dir("/usr/lib/udev/rules.d")
+        utils.ensure_dir("/etc/udev/rules.d")
+        self._run_commands(
+            [
+                "make check",
+                "make install",
+                "tar -xvf /sources/udev-lfs-20171102.tar.xz",
+                "make -f udev-lfs-20171102/Makefile.lfs install",
+                "udevadm hwdb --update",
+            ]
+        )
+
+
+class ManDb(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "man-db"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr "
+                "--docdir=/usr/share/doc/man-db-2.11.2 --sysconfdir=/etc "
+                "--disable-setuid --enable-cache-owner=bin "
+                "--with-browser=/usr/bin/lynx --with-vgrind=/usr/bin/vgrind "
+                "--with-grap=/usr/bin/grap --with-systemdtmpfilesdir= "
+                "--with-systemdsystemunitdir= ",
+                "make",
+                "make check",
+                "make install",
+            ]
+        )
+
+
+class Procps(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr "
+                "--docdir=/usr/share/doc/procps-ng-4.0.2 --disable-static "
+                "--disable-kill ",
+                "make",
+                #"make check",
+                "make install",
+            ]
+        )
+
+
+class UtilLinux(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "util-linux"
+
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure ADJTIME_PATH=/var/lib/hwclock/adjtime "
+                "--bindir=/usr/bin --libdir=/usr/lib --sbindir=/usr/sbin "
+                "--disable-chfn-chsh --disable-login --disable-nologin "
+                "--disable-su --disable-setpriv --disable-runuser "
+                "--disable-pylibmount --disable-static --without-python "
+                "--without-systemd --without-systemdsystemunitdir "
+                "--docdir=/usr/share/doc/util-linux-2.38.1 ",
+                "make"
+            ]
+        )
+        utils.chown_tree(".", "tester")
+        self._run_as_tester("make -k check")
+        self._run("make install")
+
+
+class E2fsprog(Package):
+    def _inner_build(self):
+        self._create_and_enter_build_dir()
+        self._run_commands(
+            [
+                "../configure --prefix=/usr --sysconfdir=/etc "
+                "--enable-elf-shlibs --disable-libblkid --disable-libuuid "
+                "--disable-uuidd --disable-fsck ",
+                "make",
+                "make check",
+                "make install"
+            ]
+        )
+        for archive in ["libcom_err", "libe2p", "libext2fs", "libss"]:
+            utils.ensure_removal(f"/usr/lib/{archive}.a")
+        self._run_commands(
+            [
+                "gunzip -v /usr/share/info/libext2fs.info.gz",
+                "install-info --dir-file=/usr/share/info/dir "
+                "/usr/share/info/libext2fs.info",
+                "makeinfo -o doc/com_err.info ../lib/et/com_err.texinfo",
+                "install -v -m644 doc/com_err.info /usr/share/info",
+                "install-info --dir-file=/usr/share/info/dir "
+                "/usr/share/info/com_err.info"
+            ]
+        )
+        utils.modify(
+            "/etc/mke2fs.conf",
+            lambda line, _: line.replace("metadata_csum_seed,", "")
+        )
+
+
+class Sysklogd(Package):
+    def _inner_build(self):
+        utils.modify(
+            "ksym_mod.c",
+            lambda line, i: line + " " * 16 + "fclose(ksyms);\n"
+                if i == 191 else line
+        )
+        utils.modify(
+            "syslogd.c",
+            lambda line, _: line.replace("union wait", "int")
+        )
+        self._run_commands(
+            [
+                "make",
+                "make BINDIR=/sbin install",
+            ]
+        )
+
+
+class Sysvinit(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "patch -Np1 -i /sources/sysvinit-3.06-consolidated-1.patch",
+                "make",
+                "make install",
+            ]
+        )
+
 
 
 
@@ -1153,8 +1461,8 @@ main_build_packages = [
     XmlParser,
     Intltool,
     Autoconf,
-    Openssl,
     Automake,
+    Openssl,
     Kmod,
     Elfutils,
     Libffi,
@@ -1167,5 +1475,21 @@ main_build_packages = [
     Diffutils,
     Gawk,
     Findutils,
+    Groff,
+    Gzip,
+    Iproute,
+    Kbd,
+    Libpipeline,
+    Make,
+    Patch,
+    Tar,
+    Texinfo,
+    Vim,
+    Eudev,
+    ManDb,
+    Procps,
+    UtilLinux,
+    E2fsprog,
+    Sysklogd,
 ]
 

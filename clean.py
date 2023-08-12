@@ -42,7 +42,8 @@ def _clean_etc():
     """Run outside chroot please!"""
     contents = os.listdir("etc")
     for item in contents:
-        if item not in ["group", "hosts", "passwd", "nsswitch.conf"]:
+        if item not in ["group", "hosts", "passwd", "nsswitch.conf",
+            "syslog.conf"]:
             utils.ensure_removal(f"etc/{item}")
 
 
