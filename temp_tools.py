@@ -302,4 +302,3 @@ temp_tools_packages = [
 ]
 
 chroot_temp_tools_packages = [TempGettext, TempBison, TempPerl, TempPython, TempTexinfo]
-

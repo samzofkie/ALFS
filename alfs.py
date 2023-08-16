@@ -9,7 +9,7 @@ from cross_toolchain import cross_toolchain_packages
 from temp_tools import temp_tools_packages, chroot_temp_tools_packages
 from main_build import main_build_packages
 
-SYS_DIRS = ["var", "usr", "etc", "lib64", "tools"]
+SYS_DIRS = ["var", "usr", "etc", "lib64", "tools", "boot"]
 
 
 def _ensure_wget_list():
@@ -75,11 +75,11 @@ class FileTracker:
 
     def record_new_files_since(self, start_time, target_name):
         self._update_recorded_files()
-        
+
         new_files = set()
         for file in self.recorded_files:
             if os.stat(file).st_mtime > start_time:
-                new_files.add(file) 
+                new_files.add(file)
 
         utils.write_file(
             f"{self.root_dir}/package-records/{target_name}",
@@ -114,7 +114,6 @@ def _enter_chroot(root_dir):
 
 def _make_additional_dirs():
     chroot_dirs = [
-        "boot",
         "home/tester",
         "mnt",
         "opt",
@@ -202,8 +201,8 @@ if __name__ == "__main__":
     ft.root_dir = "/"
     for package in chroot_temp_tools_packages:
         package(base_dir, ft).build()
-
     clean_temp_system()
-
     for package in main_build_packages:
         package(base_dir, ft).build()
+    utils.ensure_dir("/boot/efi")
+

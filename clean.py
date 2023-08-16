@@ -42,8 +42,15 @@ def _clean_etc():
     """Run outside chroot please!"""
     contents = os.listdir("etc")
     for item in contents:
-        if item not in ["group", "hosts", "passwd", "nsswitch.conf",
-            "syslog.conf"]:
+        if item not in [
+            "group",
+            "hosts",
+            "inittab" "passwd",
+            "profile",
+            "shells",
+            "nsswitch.conf",
+            "syslog.conf",
+        ]:
             utils.ensure_removal(f"etc/{item}")
 
 
@@ -56,7 +63,7 @@ def _umount_vkfs():
 
 
 def clean():
-    #_umount_vkfs()
+    # _umount_vkfs()
     remove_source_dirs()
     _remove_sys_dirs()
     _clean_etc()

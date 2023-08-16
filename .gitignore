@@ -4,7 +4,6 @@ usr
 lib64
 tools
 sources
-wget-list
 .python_history
 .bash_history
 .bashrc

@@ -51,4 +51,3 @@ def chown_tree(root, user_name):
         shutil.chown(root, user=user_name)
         for file in files:
             shutil.chown(f"{root}/{file}", user=user_name)
-

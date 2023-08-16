@@ -502,82 +502,110 @@ class Gcc(Package):
                 "../configure --prefix=/usr LD=ld --enable-languages=c,c++ "
                 "--enable-default-pie --enable-default-ssp --disable-multilib "
                 "--disable-bootstrap --with-system-zlib ",
-                "make"
+                "make",
             ]
         )
-        
-        utils.chown_tree(".", "tester")        
+
+        utils.chown_tree(".", "tester")
         self._run_as_tester("make -k check")
-        
-        report = subprocess.run("../contrib/test_summary".split(),
-                                   check=True, env=self.env,
-                                   capture_output=True).stdout.decode()
-        utils.write_file("/gcc-report", [f"{line}\n" 
-                                         for line in report.split("\n")])
-        
+
+        report = subprocess.run(
+            "../contrib/test_summary".split(),
+            check=True,
+            env=self.env,
+            capture_output=True,
+        ).stdout.decode()
+        utils.write_file("/gcc-report", [f"{line}\n" for line in report.split("\n")])
+
         self._run("make install")
- 
-        triplet = subprocess.run("gcc -dumpmachine".split(), check=True, env=self.env,
-                                 capture_output=True).stdout.decode().strip()
+
+        triplet = (
+            subprocess.run(
+                "gcc -dumpmachine".split(),
+                check=True,
+                env=self.env,
+                capture_output=True,
+            )
+            .stdout.decode()
+            .strip()
+        )
         for suffix in ["", "-fixed"]:
-            for root, dirs, files in os.walk(f"/usr/lib/gcc/{triplet}/12.2.0/include{suffix}"):
+            for root, dirs, files in os.walk(
+                f"/usr/lib/gcc/{triplet}/12.2.0/include{suffix}"
+            ):
                 for file in files:
                     shutil.chown(f"{root}/{file}", user="root", group="root")
-        
+
         utils.ensure_symlink("../bin/cpp", "/usr/lib/cpp")
-        utils.ensure_symlink(f"../../libexec/gcc/{triplet}/12.2.0/liblto_plugin.so",
-                             f"/usr/lib/bfd-plugins")
+        utils.ensure_symlink(
+            f"../../libexec/gcc/{triplet}/12.2.0/liblto_plugin.so",
+            f"/usr/lib/bfd-plugins",
+        )
 
         utils.write_file("dummy.c", "int main(){}")
-        cc_output = subprocess.run("cc dummy.c -v -Wl,--verbose".split(),
-                                   env=self.env, check=True,
-                                   stdout=subprocess.PIPE, 
-                                   stderr=subprocess.STDOUT).stdout.decode()
-        
-        utils.write_file("dummy.log", [f"{line}\n" for line in
-                                       cc_output.split("\n")])
+        cc_output = subprocess.run(
+            "cc dummy.c -v -Wl,--verbose".split(),
+            env=self.env,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        ).stdout.decode()
+
+        utils.write_file("dummy.log", [f"{line}\n" for line in cc_output.split("\n")])
         assert (
             "[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]"
-            in subprocess.run("readelf -l a.out".split(), env=self.env,
-                              check=True, capture_output=True).stdout.decode()
+            in subprocess.run(
+                "readelf -l a.out".split(),
+                env=self.env,
+                check=True,
+                capture_output=True,
+            ).stdout.decode()
         )
 
         dummy_log = utils.read_file("dummy.log")
 
-        assert len(re.findall(r'/usr/lib/gcc.*/S?crt[1in].*succeeded',
-                              "".join(dummy_log))) >= 3
-        
+        assert (
+            len(re.findall(r"/usr/lib/gcc.*/S?crt[1in].*succeeded", "".join(dummy_log)))
+            >= 3
+        )
+
         begin_index = dummy_log.index("#include <...> search starts here:\n") + 1
-        include_paths = [path.strip() for path in 
-                         dummy_log[begin_index:begin_index+4]]
-        for path in [f"/usr/lib/gcc/{triplet}/12.2.0/include",
-                     "/usr/local/include",
-                     f"/usr/lib/gcc/{triplet}/12.2.0/include-fixed",
-                     "/usr/include"]:
+        include_paths = [
+            path.strip() for path in dummy_log[begin_index : begin_index + 4]
+        ]
+        for path in [
+            f"/usr/lib/gcc/{triplet}/12.2.0/include",
+            "/usr/local/include",
+            f"/usr/lib/gcc/{triplet}/12.2.0/include-fixed",
+            "/usr/include",
+        ]:
             assert path in include_paths
 
-        linker_paths = re.findall(r'SEARCH.*/usr/lib',
-                                  "".join(dummy_log))[0].split("; ")
+        linker_paths = re.findall(r"SEARCH.*/usr/lib", "".join(dummy_log))[0].split(
+            "; "
+        )
         linker_paths = [path.split('"')[1] for path in linker_paths]
-        for path in [f"/usr/{triplet}/lib64",
-                     "/usr/local/lib64",
-                     "/lib64",
-                     "/usr/lib64",
-                     f"/usr/{triplet}/lib",
-                     "/usr/local/lib",
-                     "/lib",
-                     "/usr/lib"]:
+        for path in [
+            f"/usr/{triplet}/lib64",
+            "/usr/local/lib64",
+            "/lib64",
+            "/usr/lib64",
+            f"/usr/{triplet}/lib",
+            "/usr/local/lib",
+            "/lib",
+            "/usr/lib",
+        ]:
             assert path in linker_paths
 
         assert "attempt to open /usr/lib/libc.so.6 succeeded\n" in dummy_log
-        assert ("found ld-linux-x86-64.so.2 at /usr/lib/ld-linux-x86-64.so.2\n"
-                in dummy_log)
-        
+        assert (
+            "found ld-linux-x86-64.so.2 at /usr/lib/ld-linux-x86-64.so.2\n" in dummy_log
+        )
+
         utils.ensure_dir("/usr/share/gdb/auto-load/usr/lib")
         for file in os.listdir("/usr/lib"):
             if file[-6:] == "gdb.py":
-                shutil.move(f"/usr/lib/{file}", 
-                            "/usr/share/gdb/auto-load/usr/lib")
+                shutil.move(f"/usr/lib/{file}", "/usr/share/gdb/auto-load/usr/lib")
 
 
 class PkgConfig(Package):
@@ -592,7 +620,7 @@ class PkgConfig(Package):
                 "--disable-host-tool --docdir=/usr/share/doc/pkg-config-0.29.2",
                 "make",
                 "make check",
-                "make install"
+                "make install",
             ]
         )
 
@@ -606,7 +634,7 @@ class Ncurses(Package):
                 "--with-cxx-shared --enable-pc-files --enable-widec "
                 "--with-pkg-config-libdir=/usr/lib/pkgconfig ",
                 "make",
-                "make install"
+                "make install",
             ]
         )
         for name in ["curses", "form", "panel", "menu"]:
@@ -615,10 +643,10 @@ class Ncurses(Package):
             utils.ensure_symlink(f"{name}w.pc", f"/usr/lib/pkgconfig/{name}.pc")
         utils.ensure_removal("/usr/lib/libcursesw.so")
         utils.write_file(f"/usr/lib/libcursesw.so", [f"INPUT(-lncursesw)"])
-        
+
         utils.ensure_removal(f"/usr/lib/libcurses.so")
         utils.ensure_symlink(f"libncurses.so", "/usr/lib/libcurses.so")
-        
+
         utils.ensure_dir("/usr/share/doc/ncurses-6.4")
         shutil.copytree("doc", "/usr/share/doc/ncurses-6.4", dirs_exist_ok=True)
 
@@ -645,13 +673,7 @@ class Sed(Package):
 
 class Psmisc(Package):
     def _inner_build(self):
-        self._run_commands(
-            [
-                "./configure --prefix=/usr",
-                "make",
-                "make install"
-            ]
-        )
+        self._run_commands(["./configure --prefix=/usr", "make", "make install"])
 
 
 class Gettext(Package):
@@ -661,8 +683,8 @@ class Gettext(Package):
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/gettext-0.21.1 ",
                 "make",
-                #"make check",
-                "make install"
+                # "make check",
+                "make install",
             ]
         )
         os.chmod("/usr/lib/preloadable_libintl.so", 0o755)
@@ -682,15 +704,12 @@ class Bison(Package):
 
 class Grep(Package):
     def _inner_build(self):
-        utils.modify(
-            "src/egrep.sh",
-            lambda line, _: line.replace("echo", "#echo")
-        )
+        utils.modify("src/egrep.sh", lambda line, _: line.replace("echo", "#echo"))
         self._run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
-                #"make check",
+                # "make check",
                 "make install",
             ]
         )
@@ -716,7 +735,7 @@ class Libtool(Package):
             [
                 "./configure --prefix=/usr ",
                 "make",
-                #"make -k check",
+                # "make -k check",
                 "make install",
             ]
         )
@@ -727,8 +746,7 @@ class Gdbm(Package):
     def _inner_build(self):
         self._run_commands(
             [
-                "./configure --prefix=/usr --disable-static "
-                "--enable-libgdbm-compat",
+                "./configure --prefix=/usr --disable-static " "--enable-libgdbm-compat",
                 "make",
                 "make check",
                 "make install",
@@ -773,8 +791,8 @@ class Inetutils(Package):
                 "--disable-rcp --disable-rexec --disable-rlogin --disable-rsh "
                 "--disable-servers ",
                 "make",
-                #"make check",
-                "make install"
+                # "make check",
+                "make install",
             ]
         )
         if not os.path.exists("/usr/sbin/ifconfig"):
@@ -784,11 +802,7 @@ class Inetutils(Package):
 class Less(Package):
     def _inner_build(self):
         self._run_commands(
-            [
-                "./configure --prefix=/usr --sysconfdir=/etc",
-                "make",
-                "make install"
-            ]
+            ["./configure --prefix=/usr --sysconfdir=/etc", "make", "make install"]
         )
 
 
@@ -807,16 +821,17 @@ class Perl(Package):
             "-Dman1dir=/usr/share/man/man1 "
             "-Dman3dir=/usr/share/man/man3 "
             '-Dpager="/usr/bin/less-isR" '
-            "-Duseshrplib -Dusethreads ").split()
+            "-Duseshrplib -Dusethreads "
+        ).split()
         config_command[-3] = '-Dpager="/usr/bin/less -isR"'
         subprocess.run(config_command, env=self.env, check=True)
         self._run_commands(
             [
                 "make",
-                #"make test",
+                # "make test",
                 "make install",
             ]
-        ) 
+        )
         del self.env["BUILD_ZLIB"]
         del self.env["BUILD_BZIP2"]
 
@@ -827,29 +842,19 @@ class XmlParser(Package):
         self.search_term = "XML-Parser"
 
     def _inner_build(self):
-        self._run_commands(
-            [
-                "perl Makefile.PL",
-                "make",
-                "make test",
-                "make install"
-            ]
-        )
+        self._run_commands(["perl Makefile.PL", "make", "make test", "make install"])
 
 
 class Intltool(Package):
     def _inner_build(self):
-        utils.modify(
-            "intltool-update.in",
-            lambda line, _: line.replace("\${", "\$\{")
-        )
+        utils.modify("intltool-update.in", lambda line, _: line.replace("\${", "\$\{"))
         self._run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
                 "make check",
                 "make install",
-                "install -v -Dm644 doc/I18N-HOWTO /usr/share/doc/intltool-0.51.0/I18N-HOWTO"
+                "install -v -Dm644 doc/I18N-HOWTO /usr/share/doc/intltool-0.51.0/I18N-HOWTO",
             ]
         )
 
@@ -859,12 +864,9 @@ class Autoconf(Package):
         shutil.copy("tests/local.at", "tests/local.at.orig")
         utils.modify(
             "tests/local.at",
-            lambda line, _: line.replace(
-                "|START_TIME|", "|SHLVL|START_TIME|"
-                ).replace(
-                    "/^BASH_ARGV=/ d\n",
-                    "/^BASH_ARGV=/ d\n        /^SHLVL=/ d\n"
-                )
+            lambda line, _: line.replace("|START_TIME|", "|SHLVL|START_TIME|").replace(
+                "/^BASH_ARGV=/ d\n", "/^BASH_ARGV=/ d\n        /^SHLVL=/ d\n"
+            ),
         )
         self._run_commands(
             [
@@ -880,11 +882,10 @@ class Automake(Package):
     def _inner_build(self):
         self._run_commands(
             [
-                "./configure --prefix=/usr "
-                "--docdir=/usr/share/doc/automake-1.16.5",
+                "./configure --prefix=/usr " "--docdir=/usr/share/doc/automake-1.16.5",
                 "make",
-                #"make -j4 check",
-                "make install"
+                # "make -j4 check",
+                "make install",
             ]
         )
 
@@ -901,13 +902,13 @@ class Openssl(Package):
         )
         utils.modify(
             "Makefile",
-            lambda line, _: line.replace("libcrypto.a libssl.a", "") 
-                if "INSTALL_LIBS" in line else line
+            lambda line, _: line.replace("libcrypto.a libssl.a", "")
+            if "INSTALL_LIBS" in line
+            else line,
         )
         self._run("make MANSUFFIX=ssl install")
         os.rename("/usr/share/doc/openssl", "/usr/share/doc/openssl-3.0.8")
-        shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8",
-                        dirs_exist_ok=True)
+        shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8", dirs_exist_ok=True)
 
 
 class Kmod(Package):
@@ -917,7 +918,7 @@ class Kmod(Package):
                 "./configure --prefix=/usr --sysconfdir=/etc --with-openssl "
                 "--with-xz --with-zstd --with-zlib",
                 "make",
-                "make install"
+                "make install",
             ]
         )
         for target in ["depmod", "insmod", "modinfo", "modprobe", "rmmod"]:
@@ -932,7 +933,7 @@ class Elfutils(Package):
                 "./configure --prefix=/usr --disable-debuginfod "
                 "--enable-libdebuginfod=dummy",
                 "make",
-                #"make check",
+                # "make check",
                 "make -C libelf install",
                 "install -vm644 config/libelf.pc /usr/lib/pkgconfig",
             ]
@@ -944,8 +945,7 @@ class Libffi(Package):
     def _inner_build(self):
         self._run_commands(
             [
-                "./configure --prefix=/usr --disable-static "
-                "--with-gcc-arch=native",
+                "./configure --prefix=/usr --disable-static " "--with-gcc-arch=native",
                 "make",
                 "make check",
                 "make install",
@@ -976,8 +976,7 @@ class Python(Package):
 class Wheel(Package):
     def _inner_build(self):
         self.env["PYTHONPATH"] = "src"
-        self._run("pip3 wheel -w dist --no-build-isolation --no-deps "
-                 f"{os.getcwd()}")
+        self._run("pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}")
         del self.env["PYTHONPATH"]
         self._run("pip3 install --no-index --find-links=dist wheel")
 
@@ -1002,8 +1001,7 @@ class Meson(Package):
     def _inner_build(self):
         self._run_commands(
             [
-                "pip3 wheel -w dist --no-build-isolation --no-deps "
-                f"{os.getcwd()}",
+                "pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}",
                 "pip3 install --no-index --find-links dist meson",
                 "install -vDm644 data/shell-completions/bash/meson "
                 "/usr/share/bash-completion/completions/meson",
@@ -1015,36 +1013,29 @@ class Meson(Package):
 
 class Coreutils(Package):
     def _inner_build(self):
-        self.env["FORCE_UNSAFE_CONFIGURE"] = "1" 
+        self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
         self._run_commands(
             [
                 "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
                 "autoreconf -fiv",
-                "./configure --prefix=/usr "
-                "--enable-no-install-program=kill,uptime ",
+                "./configure --prefix=/usr " "--enable-no-install-program=kill,uptime ",
                 "make",
                 "make NON_ROOT_USERNAME=tester check-root",
             ]
         )
         del self.env["FORCE_UNSAFE_CONFIGURE"]
         utils.write_file(
-            "/etc/group",
-            utils.read_file("/etc/group") + ["dummy:x:102:tester"]
+            "/etc/group", utils.read_file("/etc/group") + ["dummy:x:102:tester"]
         )
         utils.chown_tree(".", "tester")
         self._run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
-        utils.write_file(
-            "/etc/group",
-            utils.read_file("/etc/group")[:-1]
-        )
+        utils.write_file("/etc/group", utils.read_file("/etc/group")[:-1])
         self._run("make install")
         os.replace("/usr/bin/chroot", "/usr/sbin/chroot")
         utils.ensure_dir("/usr/share/man/man8")
-        os.replace("/usr/share/man/man1/chroot.1",
-                    "/usr/share/man/man8/chroot.8")
+        os.replace("/usr/share/man/man1/chroot.1", "/usr/share/man/man8/chroot.8")
         utils.modify(
-            "/usr/share/man/man8/chroot.8",
-            lambda line, _: line.replace('"1"', '"8"')
+            "/usr/share/man/man8/chroot.8", lambda line, _: line.replace('"1"', '"8"')
         )
 
 
@@ -1055,7 +1046,7 @@ class Check(Package):
                 "./configure --prefix=/usr --disable-static",
                 "make",
                 "make check",
-                "make docdir=/usr/share/doc/check-0.15.2 install"
+                "make docdir=/usr/share/doc/check-0.15.2 install",
             ]
         )
 
@@ -1066,18 +1057,15 @@ class Diffutils(Package):
             [
                 "./configure --prefix=/usr",
                 "make",
-                #"make check",
-                "make install"
+                # "make check",
+                "make install",
             ]
         )
 
 
 class Gawk(Package):
     def _inner_build(self):
-        utils.modify(
-            "Makefile.in",
-            lambda line, _: line.replace("extras", "")
-        )
+        utils.modify("Makefile.in", lambda line, _: line.replace("extras", ""))
         self._run_commands(
             [
                 "./configure --prefix=/usr",
@@ -1085,8 +1073,7 @@ class Gawk(Package):
                 "make check",
             ]
         )
-        subprocess.run(["make", "LN='ln -f'", "install"], check=True,
-                       env=self.env)
+        subprocess.run(["make", "LN='ln -f'", "install"], check=True, env=self.env)
         utils.ensure_dir("/usr/share/doc/gawk-5.2.1")
         shutil.copy("doc/awkforai.txt", "/usr/share/doc/gawk-5.2.1")
         for file in os.listdir("doc"):
@@ -1097,10 +1084,7 @@ class Gawk(Package):
 class Findutils(Package):
     def _inner_build(self):
         self._run_commands(
-            [
-                "./configure --prefix=/usr --localstatedir=/var/lib/locate",
-                "make"
-            ]
+            ["./configure --prefix=/usr --localstatedir=/var/lib/locate", "make"]
         )
         utils.chown_tree(".", "tester")
         self._run_as_tester("make check")
@@ -1110,13 +1094,7 @@ class Findutils(Package):
 class Groff(Package):
     def _inner_build(self):
         self.env["PAGE"] = "letter"
-        self._run_commands(
-            [
-                "./configure --prefix=/usr",
-                "make",
-                "make install"
-            ]
-        )
+        self._run_commands(["./configure --prefix=/usr", "make", "make install"])
         del self.env["PAGE"]
 
 
@@ -1126,7 +1104,7 @@ class Gzip(Package):
             [
                 "./configure --prefix=/usr",
                 "make",
-                #"make check",
+                # "make check",
                 "make install",
             ]
         )
@@ -1134,10 +1112,7 @@ class Gzip(Package):
 
 class Iproute(Package):
     def _inner_build(self):
-        utils.modify(
-            "Makefile",
-            lambda line, _: "" if "ARPD" in line else line
-        )
+        utils.modify("Makefile", lambda line, _: "" if "ARPD" in line else line)
         utils.ensure_removal("man/man8/arpd.8")
         self._run_commands(
             [
@@ -1156,24 +1131,24 @@ class Kbd(Package):
         self._run("patch -Np1 -i /sources/kbd-2.5.1-backspace-1.patch")
         utils.modify(
             "configure",
-            lambda line, _: line.replace("yes", "no") 
-                if "RESIZECONS_PROGS=" in line else line
+            lambda line, _: line.replace("yes", "no")
+            if "RESIZECONS_PROGS=" in line
+            else line,
         )
         utils.modify(
             "docs/man/man8/Makefile.in",
-            lambda line, _: line.replace("resizecons.8 ", "")
+            lambda line, _: line.replace("resizecons.8 ", ""),
         )
         self._run_commands(
             [
                 "./configure --prefix=/usr --disable-vlock",
                 "make",
                 "make check",
-                "make install"
+                "make install",
             ]
         )
         utils.ensure_dir("/usr/share/doc/kbd-2.5.1")
-        shutil.copytree("docs/doc", "/usr/share/doc/kbd-2.5.1",
-                        dirs_exist_ok=True)
+        shutil.copytree("docs/doc", "/usr/share/doc/kbd-2.5.1", dirs_exist_ok=True)
 
 
 class Libpipeline(Package):
@@ -1192,9 +1167,11 @@ class Make(Package):
     def _inner_build(self):
         utils.modify(
             "src/main.c",
-            lambda line, i: "" if i in range(1185,1189) 
-                else line.replace("#undef  FATAL_SIG",
-                                  "FATAL_SIG (SIGPIPE);\n#undef  FATAL_SIG")
+            lambda line, i: ""
+            if i in range(1185, 1189)
+            else line.replace(
+                "#undef  FATAL_SIG", "FATAL_SIG (SIGPIPE);\n#undef  FATAL_SIG"
+            ),
         )
         self._run_commands(
             [
@@ -1225,7 +1202,7 @@ class Tar(Package):
             [
                 "./configure --prefix=/usr",
                 "make",
-                #"make check",
+                # "make check",
                 "make install",
                 "make -C doc install-html docdir=/usr/share/doc/tar-1.34",
             ]
@@ -1241,7 +1218,7 @@ class Texinfo(Package):
                 "make",
                 "make check",
                 "make install",
-                "make TEXMF=/usr/share/texmf install-tex"
+                "make TEXMF=/usr/share/texmf install-tex",
             ]
         )
 
@@ -1249,9 +1226,9 @@ class Texinfo(Package):
 class Vim(Package):
     def _inner_build(self):
         utils.write_file(
-            "src/feature.h", 
-            utils.read_file("src/feature.h") + 
-            ['\n#define SYS_VIMRC_FILE "/etc/vimrc"']
+            "src/feature.h",
+            utils.read_file("src/feature.h")
+            + ['\n#define SYS_VIMRC_FILE "/etc/vimrc"'],
         )
         self._run_commands(
             [
@@ -1260,11 +1237,11 @@ class Vim(Package):
             ]
         )
 
-        utils.chown_tree(".", "tester") 
+        utils.chown_tree(".", "tester")
         self.env["LANG"] = "en_US.UTF-8"
         self._run_as_tester("make -j1 test")
         del self.env["LANG"]
-        
+
         self._run("make install")
         utils.ensure_symlink("../vim/vim90/doc", "/usr/share/doc/vim-9.0.1273")
 
@@ -1273,14 +1250,15 @@ class Eudev(Package):
     def _inner_build(self):
         utils.modify(
             "src/udev/udev.pc.in",
-            lambda line, _: line + "\nudev_dir=${udevdir}" 
-                if "udevdir" in line else line
+            lambda line, _: line + "\nudev_dir=${udevdir}"
+            if "udevdir" in line
+            else line,
         )
         self._run_commands(
             [
                 "./configure --prefix=/usr --bindir=/usr/sbin "
                 "--sysconfdir=/etc --enable-manpages --disable-static ",
-                "make"
+                "make",
             ]
         )
         utils.ensure_dir("/usr/lib/udev/rules.d")
@@ -1325,7 +1303,7 @@ class Procps(Package):
                 "--docdir=/usr/share/doc/procps-ng-4.0.2 --disable-static "
                 "--disable-kill ",
                 "make",
-                #"make check",
+                # "make check",
                 "make install",
             ]
         )
@@ -1346,7 +1324,7 @@ class UtilLinux(Package):
                 "--disable-pylibmount --disable-static --without-python "
                 "--without-systemd --without-systemdsystemunitdir "
                 "--docdir=/usr/share/doc/util-linux-2.38.1 ",
-                "make"
+                "make",
             ]
         )
         utils.chown_tree(".", "tester")
@@ -1364,7 +1342,7 @@ class E2fsprog(Package):
                 "--disable-uuidd --disable-fsck ",
                 "make",
                 "make check",
-                "make install"
+                "make install",
             ]
         )
         for archive in ["libcom_err", "libe2p", "libext2fs", "libss"]:
@@ -1377,12 +1355,11 @@ class E2fsprog(Package):
                 "makeinfo -o doc/com_err.info ../lib/et/com_err.texinfo",
                 "install -v -m644 doc/com_err.info /usr/share/info",
                 "install-info --dir-file=/usr/share/info/dir "
-                "/usr/share/info/com_err.info"
+                "/usr/share/info/com_err.info",
             ]
         )
         utils.modify(
-            "/etc/mke2fs.conf",
-            lambda line, _: line.replace("metadata_csum_seed,", "")
+            "/etc/mke2fs.conf", lambda line, _: line.replace("metadata_csum_seed,", "")
         )
 
 
@@ -1390,13 +1367,9 @@ class Sysklogd(Package):
     def _inner_build(self):
         utils.modify(
             "ksym_mod.c",
-            lambda line, i: line + " " * 16 + "fclose(ksyms);\n"
-                if i == 191 else line
+            lambda line, i: line + " " * 16 + "fclose(ksyms);\n" if i == 191 else line,
         )
-        utils.modify(
-            "syslogd.c",
-            lambda line, _: line.replace("union wait", "int")
-        )
+        utils.modify("syslogd.c", lambda line, _: line.replace("union wait", "int"))
         self._run_commands(
             [
                 "make",
@@ -1415,6 +1388,132 @@ class Sysvinit(Package):
             ]
         )
 
+
+class LfsBootscripts(Package):
+    def __init__(self, root, ft):
+        super().__init__(root, ft)
+        self.search_term = "lfs-bootscripts"
+
+    def _inner_build(self):
+        self._run("make install")
+
+
+class Linux(Package):
+    def _inner_build(self):
+        self._run("make mrproper")
+        shutil.copy("/kernel-config", ".config")
+        self._run_commands(
+            [
+                "make",
+                "make modules_install",
+            ]
+        )
+        shutil.copy("arch/x86/boot/bzImage", "/boot/vmlinuz-6.1.11-lfs-11.3")
+        shutil.copy("System.map", "/boot/System.map-6.1.11")
+        self._run("install -d /usr/share/doc/linux-6.1.11")
+        shutil.copytree(
+            "Documentation", "/usr/share/doc/linux-6.1.11", dirs_exist_ok=True
+        )
+
+        self._run("install -v -m755 -d /etc/modprobe.d")
+        utils.write_file("/etc/modprobe.d/usb.conf",
+            ["install ohci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i ohci_hcd ; true\n",
+             "install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true\n",
+            ]
+        )
+
+
+class Mandoc(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure",
+                "make mandoc",
+                "install -vm755 mandoc /usr/bin",
+                "install -vm644 mandoc.1 /usr/share/man/man1",
+            ]
+        )
+
+
+class Efivar(Package):
+    def _inner_build(self):
+        utils.modify(
+            "src/Makefile",
+            lambda line, _: f"{line}\ttouch prep\n" 
+                if "prep :" in line else line
+        )
+        self._run_commands(
+            [
+                "make",
+                "make install LIBDIR=/usr/lib",
+            ]
+        )
+
+
+class Popt(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --disable-static",
+                "make",
+                "make install",
+            ]
+        )
+
+
+class Efibootmgr(Package):
+    def _inner_build(self):
+        self._run_commands(
+            [
+                "make EFIDIR=LFS EFI_LOADER=grubx64.efi",
+                "make install EFIDIR=LFS",
+            ]
+        )
+
+
+class Freetype(Package):
+    def _inner_build(self):
+        utils.modify(
+            "modules.cfg",
+            lambda line, _: line.replace("# ", "") 
+                if "AUX_MODULES" in line and
+                "valid" in line
+                else line
+        )
+        utils.modify(
+            "include/freetype/config/ftoption.h",
+            lambda line, _: line.replace("/*", "").replace("*/", "")
+                if "SUBPIXEL_RENDERING" in line else line
+        )
+        self._run_commands(
+            [
+                "./configure --prefix=/usr --enable-freetype-config "
+                "--disable-static",
+                "make",
+                "make install",
+            ]
+        )
+
+
+# TODO: fix unifont-pcf tarball preservation
+class Grub(Package):
+    def _inner_build(self):
+        utils.ensure_dir("/usr/share/fonts/unifont")
+        self._run("gunzip /sources/unifont-15.0.01.pcf.gz")
+        os.rename("/sources/unifont-15.0.01.pcf",
+            "/usr/share/fonts/unifont/unifont.pcf")
+        self._run_commands(
+            [
+                "patch -Np1 -i /sources/grub-2.06-upstream_fixes-1.patch",
+                "./configure --prefix=/usr --sysconfdir=/etc --disable-efiemu "
+                "--enable-grub-mkfont --with-platform=efi --target=x86_64 "
+                "--disable-werror ",
+                "make",
+                "make install",
+            ]
+        )
+        os.rename("/etc/bash_completion.d/grub",
+            "/usr/share/bash-completion/completions/grub")
 
 
 
@@ -1491,5 +1590,14 @@ main_build_packages = [
     UtilLinux,
     E2fsprog,
     Sysklogd,
-]
+    Sysvinit,
+    LfsBootscripts,
+    Linux,
 
+    Mandoc,
+    Efivar,
+    Popt,
+    Efibootmgr,
+    Freetype,
+    Grub,
+]

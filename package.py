@@ -90,13 +90,13 @@ class Package:
             self.file_tracker.record_new_files_since(start_time, self.target_name)
 
     def _run_as_tester(self, command):
-        tester_line = [line for line in utils.read_file("/etc/passwd") 
-                       if "tester" in line][0]
+        tester_line = [
+            line for line in utils.read_file("/etc/passwd") if "tester" in line
+        ][0]
         tester_uid, tester_gid = tester_line.split(":")[2:4]
-        subprocess.run(command.split(), env=self.env, user=int(tester_uid),
-                       group=int(tester_gid))
-
-
+        subprocess.run(
+            command.split(), env=self.env, user=int(tester_uid), group=int(tester_gid)
+        )
 
 
 def gcc_change_default_64_bit_dir():
@@ -134,4 +134,3 @@ class PreChrootPackage(Package):
             )
             self._run(f"mv {package_name} {dep}")
         gcc_change_default_64_bit_dir()
-
