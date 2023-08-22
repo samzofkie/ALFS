@@ -1,4 +1,6 @@
-import os, shutil
+import os
+import shutil
+import subprocess
 
 
 def read_file(filename):
@@ -51,3 +53,22 @@ def chown_tree(root, user_name):
         shutil.chown(root, user=user_name)
         for file in files:
             shutil.chown(f"{root}/{file}", user=user_name)
+
+
+def run(command):
+    subprocess.run(command.split(), check=True)
+
+
+def run_commands(commands):
+    for command in commands:
+        run(command)
+
+
+def run_as_tester(command):
+    tester_line = [
+        line for line in utils.read_file("/etc/passwd") if "tester" in line
+    ][0]
+    tester_uid, tester_gid = tester_line.split(":")[2:4]
+    subprocess.run(command.split(), user=int(tester_uid), group=int(tester_gid),
+                   check=True)
+

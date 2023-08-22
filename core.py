@@ -5,18 +5,14 @@ import utils
 
 
 class ManPages(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "man-pages"
+    tarball_url = "https://www.kernel.org/pub/linux/docs/man-pages/man-pages-6.03.tar.xz"
 
     def _inner_build(self):
-        self._run("make prefix=/usr install")
+        utils.run("make prefix=/usr install")
 
 
 class IanaEtc(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "iana-etc"
+    tarball_url = "https://github.com/Mic92/iana-etc/releases/download/20230202/iana-etc-20230202.tar.gz"
 
     def _inner_build(self):
         shutil.copy("services", "/etc")
@@ -24,20 +20,21 @@ class IanaEtc(Package):
 
 
 class Glibc(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/glibc/glibc-2.37.tar.xz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/glibc-2.37-fhs-1.patch"
+
     def _inner_build(self):
-        self._run("patch -Np1 -i /sources/glibc-2.37-fhs-1.patch")
+        self.apply_patch()
         utils.modify(
             "stdio-common/vfprintf-process-arg.c",
             lambda line, i: line.replace("workend - string", "number_length")
             if i == 256
             else line,
         )
-
-        self._create_and_enter_build_dir()
-
+        self.create_and_enter_build_dir()
         utils.write_file("configparms", ["rootsbindir=/usr/sbin"])
 
-        self._run_commands(
+        utils.run_commands(
             [
                 "../configure --prefix=/usr --disable-werror "
                 "--enable-kernel=3.2 --enable-stack-protector=strong "
@@ -53,7 +50,7 @@ class Glibc(Package):
             if i == 118
             else line,
         )
-        self._run("make install")
+        utils.run("make install")
         utils.modify(
             "/usr/bin/ldd",
             lambda line, i: line.replace("/usr", "/") if i == 28 else line,
@@ -62,12 +59,12 @@ class Glibc(Package):
         os.makedirs("/var/cache/nscd")
         os.makedirs("/usr/lib/locale")
 
-        self._run("make localedata/install-locales")
+        utils.run("make localedata/install-locales")
         subprocess.run("localedef -i POSIX -f UTF-8 C.UTF-8".split(), env=self.env)
         subprocess.run(
             "localedef -i ja_JP -f SHIFT_JIS ja_JP.SJIS".split(), env=self.env
         )
-        self._run("tar -xvf /sources/tzdata2022g.tar.gz")
+        utils.run("tar -xvf /sources/tzdata2022g.tar.gz")
         zoneinfo = "/usr/share/zoneinfo"
         for d in ["posix", "right"]:
             os.makedirs(f"{zoneinfo}/{d}")
@@ -82,19 +79,21 @@ class Glibc(Package):
             "australasia",
             "backward",
         ]:
-            self._run(f"zic -L /dev/null -d {zoneinfo} {tz}")
-            self._run(f"zic -L /dev/null -d {zoneinfo}/posix {tz}")
-            self._run(f"zic -L leapseconds -d {zoneinfo}/right {tz}")
+            utils.run(f"zic -L /dev/null -d {zoneinfo} {tz}")
+            utils.run(f"zic -L /dev/null -d {zoneinfo}/posix {tz}")
+            utils.run(f"zic -L leapseconds -d {zoneinfo}/right {tz}")
         for file in ["zone.tab", "zone1970.tab", "iso3166.tab"]:
             shutil.copy(file, zoneinfo)
-        self._run(f"zic -d {zoneinfo} -p America/New_York")
+        utils.run(f"zic -d {zoneinfo} -p America/New_York")
         utils.ensure_symlink("/usr/share/zoneinfo/Chicago", "/etc/localtime")
         utils.write_file("/etc/ld.so.conf", ["/usr/local/lib\n", "/opt/lib\n"])
 
 
 class Zlib(Package):
+    tarball_url = "https://www.zlib.net/zlib-1.3.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -106,8 +105,12 @@ class Zlib(Package):
 
 
 class Bzip2(Package):
+    tarball_url = "https://www.sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/bzip2-1.0.8-install_docs-1.patch"
+
     def _inner_build(self):
-        self._run("patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch")
+        self.apply_patch()
+        utils.run("patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch")
         utils.modify(
             "Makefile",
             lambda line, _: line.replace("$(PREFIX)/bin/", "", 1)
@@ -121,7 +124,7 @@ class Bzip2(Package):
             else line,
         )
 
-        self._run_commands(
+        utils.run_commands(
             [
                 "make -f Makefile-libbz2_so",
                 "make clean",
@@ -141,8 +144,10 @@ class Bzip2(Package):
 
 
 class Xz(Package):
+    tarball_url = "https://tukaani.org/xz/xz-5.4.1.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/xz-5.4.1",
@@ -154,8 +159,12 @@ class Xz(Package):
 
 
 class Zstd(Package):
+    tarball_url = (
+        "https://github.com/facebook/zstd/releases/download/v1.5.4/zstd-1.5.4.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "make prefix=/usr",
                 "make check",
@@ -166,8 +175,12 @@ class Zstd(Package):
 
 
 class File(Package):
+    tarball_url = (
+        "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.6.tar.xz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -178,6 +191,9 @@ class File(Package):
 
 
 class Readline(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/readline-8.2-upstream_fix-1.patch"
+
     def _inner_build(self):
         utils.modify(
             "Makefile.in",
@@ -187,9 +203,9 @@ class Readline(Package):
             "support/shlib-install",
             lambda line, _: ":\n" if "{OLDSUFF}" in line else line,
         )
-        self._run("patch -Np1 -i /sources/readline-8.2-upstream_fix-1.patch")
+        self.apply_patch()
 
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static --with-curses "
                 "--docdir=/usr/share/doc/readline-8.2",
@@ -200,14 +216,16 @@ class Readline(Package):
         for file in os.listdir("doc"):
             for suffix in ["ps", "pdf", "html", "dvi"]:
                 if file[-(len(suffix) + 1) :] == f".{suffix}":
-                    self._run(
+                    utils.run(
                         f"install -v -m644 doc/{file} " "/usr/share/doc/readline-8.2"
                     )
 
 
 class M4(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -218,8 +236,10 @@ class M4(Package):
 
 
 class Bc(Package):
+    tarball_url = "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.67.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr -G -O3 -r",
                 "make",
@@ -230,8 +250,12 @@ class Bc(Package):
 
 
 class Flex(Package):
+    tarball_url = (
+        "https://github.com/westes/flex/releases/download/v2.6.4/flex-2.6.4.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --docdir=/usr/share/doc/flex-2.6.4 "
                 "--disable-static",
@@ -244,10 +268,12 @@ class Flex(Package):
 
 
 class Tcl(Package):
+    tarball_url = "https://downloads.sourceforge.net/tcl/tcl8.6.13-src.tar.gz"
+
     def _inner_build(self):
         os.chdir("unix")
-        self._run("./configure --prefix=/usr --mandir=/usr/share/man")
-        self._run("make")
+        utils.run("./configure --prefix=/usr --mandir=/usr/share/man")
+        utils.run("make")
         utils.modify(
             "tclConfig.sh", lambda line, _: line.replace("/tcl8.6.13/unix", "/usr/lib")
         )
@@ -272,17 +298,19 @@ class Tcl(Package):
                 "pkgs/itcl4.2.3/itclConfig.sh", lambda line, _: line.replace(old, new)
             )
 
-        self._run_commands(["make", "make test", "make install"])
+        utils.run_commands(["make", "make test", "make install"])
 
         os.chmod("/usr/lib/libtcl8.6.so", 0o755)
-        self._run("make install-private-headers")
+        utils.run("make install-private-headers")
         utils.ensure_symlink("tclsh8.6", "/usr/bin/tclsh")
         shutil.move("/usr/share/man/man3/Thread.3", "/usr/share/man/man3/Tcl_Thread.3")
 
 
 class Expect(Package):
+    tarball_url = "https://prdownloads.sourceforge.net/expect/expect5.45.4.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --with-tcl=/usr/lib --enable-shared "
                 "--mandir=/usr/share/man --with-tclinclude=/usr/include",
@@ -297,9 +325,11 @@ class Expect(Package):
 
 
 class Dejagnu(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/dejagnu/dejagnu-1.6.3.tar.gz"
+
     def _inner_build(self):
-        self._create_and_enter_build_dir()
-        self._run_commands(
+        self.create_and_enter_build_dir()
+        utils.run_commands(
             [
                 "../configure --prefix=/usr",
                 "makeinfo --html --no-split -o doc/dejagnu.html " "../doc/dejagnu.texi",
@@ -314,9 +344,11 @@ class Dejagnu(Package):
 
 
 class Binutils(Package):
+    tarball_url = "https://sourceware.org/pub/binutils/releases/binutils-2.40.tar.xz"
+
     def _inner_build(self):
-        self._create_and_enter_build_dir()
-        self._run_commands(
+        self.create_and_enter_build_dir()
+        utils.run_commands(
             [
                 "../configure --prefix=/usr --sysconfdir=/etc --enable-gold "
                 "--enable-ld=default --enable-plugins --enable-shared "
@@ -347,7 +379,7 @@ class Binutils(Package):
                     "gold/testsuite/test-suite.log"
                 )
 
-        self._run("make tooldir=/usr install")
+        utils.run("make tooldir=/usr install")
 
         for name in ["bfd", "ctf", "ctf-nobfd", "sframe", "opcodes"]:
             utils.ensure_removal(f"/usr/lib/lib{name}.a")
@@ -358,8 +390,10 @@ class Binutils(Package):
 
 
 class Gmp(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gmp/gmp-6.2.1.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --enable-cxx --disable-static "
                 "--docdir=/usr/share/doc/gmp-6.2.1",
@@ -373,6 +407,8 @@ class Gmp(Package):
 
 
 class Mpfr(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/mpfr/mpfr-4.2.0.tar.xz"
+
     def _inner_build(self):
         utils.modify(
             "tests/tsprintf.c",
@@ -380,7 +416,7 @@ class Mpfr(Package):
                 "13.10Pd", "13Pd"
             ),
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--enable-thread-safe --docdir=/usr/share/doc/mpfr-4.2.0",
@@ -394,8 +430,10 @@ class Mpfr(Package):
 
 
 class Mpc(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/mpc/mpc-1.3.1.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/mpc-1.3.1"
@@ -409,8 +447,10 @@ class Mpc(Package):
 
 
 class Attr(Package):
+    tarball_url = "https://download.savannah.gnu.org/releases/attr/attr-2.5.1.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static  --sysconfdir=/etc "
                 "--docdir=/usr/share/doc/attr-2.5.1",
@@ -422,8 +462,10 @@ class Attr(Package):
 
 
 class Acl(Package):
+    tarball_url = "https://download.savannah.gnu.org/releases/acl/acl-2.3.1.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/acl-2.3.1",
@@ -434,12 +476,14 @@ class Acl(Package):
 
 
 class Libcap(Package):
+    tarball_url = "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.67.tar.xz"
+
     def _inner_build(self):
         utils.modify(
             "libcap/Makefile",
             lambda line, _: "" if "install -m" in line and "$(STA" in line else line,
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "make prefix=/usr lib=lib",
                 "make test",
@@ -449,6 +493,8 @@ class Libcap(Package):
 
 
 class Shadow(Package):
+    tarball_url = "https://github.com/shadow-maint/shadow/releases/download/4.13/shadow-4.13.tar.xz"
+
     def _inner_build(self):
         utils.modify(
             "src/Makefile.in", lambda line, _: line.replace("groups$(EXEEXT)", "")
@@ -479,7 +525,7 @@ class Shadow(Package):
             utils.modify("etc/login.defs", lambda line, _: line.replace(old, new))
         utils.ensure_touch("/usr/bin/passwd")
 
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --sysconfdir=/etc --disable-static "
                 "--with-group-name-max-length=32",
@@ -494,10 +540,12 @@ class Shadow(Package):
 
 # Takes 8 hours!
 class Gcc(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gcc/gcc-12.2.0/gcc-12.2.0.tar.xz"
+
     def _inner_build(self):
         gcc_change_default_64_bit_dir()
-        self._create_and_enter_build_dir()
-        self._run_commands(
+        self.create_and_enter_build_dir()
+        utils.run_commands(
             [
                 "../configure --prefix=/usr LD=ld --enable-languages=c,c++ "
                 "--enable-default-pie --enable-default-ssp --disable-multilib "
@@ -507,7 +555,7 @@ class Gcc(Package):
         )
 
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make -k check")
+        utils.run_as_tester("make -k check")
 
         report = subprocess.run(
             "../contrib/test_summary".split(),
@@ -517,7 +565,7 @@ class Gcc(Package):
         ).stdout.decode()
         utils.write_file("/gcc-report", [f"{line}\n" for line in report.split("\n")])
 
-        self._run("make install")
+        utils.run("make install")
 
         triplet = (
             subprocess.run(
@@ -609,12 +657,10 @@ class Gcc(Package):
 
 
 class PkgConfig(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "pkg-config"
+    tarball_url = "https://pkg-config.freedesktop.org/releases/pkg-config-0.29.2.tar.gz"
 
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --with-internal-glib "
                 "--disable-host-tool --docdir=/usr/share/doc/pkg-config-0.29.2",
@@ -626,8 +672,10 @@ class PkgConfig(Package):
 
 
 class Ncurses(Package):
+    tarball_url = "https://invisible-mirror.net/archives/ncurses/ncurses-6.4.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --mandir=/usr/share/man "
                 "--with-shared --without-debug --without-normal "
@@ -652,8 +700,10 @@ class Ncurses(Package):
 
 
 class Sed(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/sed/sed-4.9.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -661,8 +711,8 @@ class Sed(Package):
             ]
         )
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make check")
-        self._run_commands(
+        utils.run_as_tester("make check")
+        utils.run_commands(
             [
                 "make install",
                 "install -d -m755 /usr/share/doc/sed-4.9",
@@ -672,13 +722,19 @@ class Sed(Package):
 
 
 class Psmisc(Package):
+    tarball_url = (
+        "https://sourceforge.net/projects/psmisc/files/psmisc/psmisc-23.6.tar.xz"
+    )
+
     def _inner_build(self):
-        self._run_commands(["./configure --prefix=/usr", "make", "make install"])
+        utils.run_commands(["./configure --prefix=/usr", "make", "make install"])
 
 
 class Gettext(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gettext/gettext-0.21.1.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/gettext-0.21.1 ",
@@ -691,8 +747,10 @@ class Gettext(Package):
 
 
 class Bison(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/bison/bison-3.8.2.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --docdir=/usr/share/doc/bison-3.8.2",
                 "make",
@@ -703,9 +761,11 @@ class Bison(Package):
 
 
 class Grep(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/grep/grep-3.8.tar.xz"
+
     def _inner_build(self):
         utils.modify("src/egrep.sh", lambda line, _: line.replace("echo", "#echo"))
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -716,8 +776,10 @@ class Grep(Package):
 
 
 class Bash(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/bash/bash-5.2.15.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --without-bash-malloc "
                 "--with-installed-readline --docdir=/usr/share/doc/bash-5.2.15",
@@ -725,13 +787,15 @@ class Bash(Package):
             ]
         )
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make tests")
-        self._run("make install")
+        utils.run_as_tester("make tests")
+        utils.run("make install")
 
 
 class Libtool(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/libtool/libtool-2.4.7.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr ",
                 "make",
@@ -743,8 +807,10 @@ class Libtool(Package):
 
 
 class Gdbm(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gdbm/gdbm-1.23.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static " "--enable-libgdbm-compat",
                 "make",
@@ -755,8 +821,10 @@ class Gdbm(Package):
 
 
 class Gperf(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gperf/gperf-3.1.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --docdir=/usr/share/doc/gperf-3.1",
                 "make",
@@ -767,8 +835,10 @@ class Gperf(Package):
 
 
 class Expat(Package):
+    tarball_url = "https://prdownloads.sourceforge.net/expat/expat-2.5.0.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static "
                 "--docdir=/usr/share/doc/expat-2.5.0",
@@ -779,12 +849,14 @@ class Expat(Package):
         )
         for file in os.listdir("doc"):
             if file[-5:] == ".html" or file[-4:] == ".css":
-                self._run(f"install -v -m644 doc/{file} /usr/share/doc/expat-2.5.0")
+                utils.run(f"install -v -m644 doc/{file} /usr/share/doc/expat-2.5.0")
 
 
 class Inetutils(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/inetutils/inetutils-2.4.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --bindir=/usr/bin "
                 "--localstatedir=/var --disable-logger --disable-whois "
@@ -800,13 +872,17 @@ class Inetutils(Package):
 
 
 class Less(Package):
+    tarball_url = "https://www.greenwoodsoftware.com/less/less-608.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             ["./configure --prefix=/usr --sysconfdir=/etc", "make", "make install"]
         )
 
 
 class Perl(Package):
+    tarball_url = "https://www.cpan.org/src/5.0/perl-5.36.0.tar.xz"
+
     def _inner_build(self):
         self.env["BUILD_ZLIB"] = "False"
         self.env["BUILD_BZIP2"] = "0"
@@ -825,7 +901,7 @@ class Perl(Package):
         ).split()
         config_command[-3] = '-Dpager="/usr/bin/less -isR"'
         subprocess.run(config_command, env=self.env, check=True)
-        self._run_commands(
+        utils.run_commands(
             [
                 "make",
                 # "make test",
@@ -837,18 +913,22 @@ class Perl(Package):
 
 
 class XmlParser(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "XML-Parser"
+    tarball_url = (
+        "https://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.46.tar.gz"
+    )
 
     def _inner_build(self):
-        self._run_commands(["perl Makefile.PL", "make", "make test", "make install"])
+        utils.run_commands(["perl Makefile.PL", "make", "make test", "make install"])
 
 
 class Intltool(Package):
+    tarball_url = (
+        "https://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz"
+    )
+
     def _inner_build(self):
         utils.modify("intltool-update.in", lambda line, _: line.replace("\${", "\$\{"))
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -860,6 +940,8 @@ class Intltool(Package):
 
 
 class Autoconf(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/autoconf/autoconf-2.71.tar.xz"
+
     def _inner_build(self):
         shutil.copy("tests/local.at", "tests/local.at.orig")
         utils.modify(
@@ -868,7 +950,7 @@ class Autoconf(Package):
                 "/^BASH_ARGV=/ d\n", "/^BASH_ARGV=/ d\n        /^SHLVL=/ d\n"
             ),
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -879,8 +961,10 @@ class Autoconf(Package):
 
 
 class Automake(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/automake/automake-1.16.5.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr " "--docdir=/usr/share/doc/automake-1.16.5",
                 "make",
@@ -891,8 +975,10 @@ class Automake(Package):
 
 
 class Openssl(Package):
+    tarball_url = "https://www.openssl.org/source/openssl-3.0.8.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./config --prefix=/usr --openssldir=/etc/ssl --libdir=lib "
                 "shared zlib-dynamic ",
@@ -906,14 +992,16 @@ class Openssl(Package):
             if "INSTALL_LIBS" in line
             else line,
         )
-        self._run("make MANSUFFIX=ssl install")
+        utils.run("make MANSUFFIX=ssl install")
         os.rename("/usr/share/doc/openssl", "/usr/share/doc/openssl-3.0.8")
         shutil.copytree("doc", "/usr/share/doc/openssl-3.0.8", dirs_exist_ok=True)
 
 
 class Kmod(Package):
+    tarball_url = "https://www.kernel.org/pub/linux/utils/kernel/kmod/kmod-30.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --sysconfdir=/etc --with-openssl "
                 "--with-xz --with-zstd --with-zlib",
@@ -927,8 +1015,10 @@ class Kmod(Package):
 
 
 class Elfutils(Package):
+    tarball_url = "https://sourceware.org/ftp/elfutils/0.188/elfutils-0.188.tar.bz2"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-debuginfod "
                 "--enable-libdebuginfod=dummy",
@@ -942,8 +1032,12 @@ class Elfutils(Package):
 
 
 class Libffi(Package):
+    tarball_url = (
+        "https://github.com/libffi/libffi/releases/download/v3.4.4/libffi-3.4.4.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static " "--with-gcc-arch=native",
                 "make",
@@ -954,12 +1048,12 @@ class Libffi(Package):
 
 
 class Python(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "Python"
+    tarball_url = (
+        "https://www.python.org/ftp/python/doc/3.11.2/python-3.11.2-docs-html.tar.bz2"
+    )
 
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --enable-shared --with-system-expat "
                 "--with-system-ffi --enable-optimizations",
@@ -974,16 +1068,22 @@ class Python(Package):
 
 
 class Wheel(Package):
+    tarball_url = "https://pypi.org/packages/source/w/wheel/wheel-0.38.4.tar.gz"
+
     def _inner_build(self):
         self.env["PYTHONPATH"] = "src"
-        self._run("pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}")
+        utils.run("pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}")
         del self.env["PYTHONPATH"]
-        self._run("pip3 install --no-index --find-links=dist wheel")
+        utils.run("pip3 install --no-index --find-links=dist wheel")
 
 
 class Ninja(Package):
+    tarball_url = (
+        "https://github.com/ninja-build/ninja/archive/v1.11.1/ninja-1.11.1.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "python3 configure.py --bootstrap",
                 "./ninja ninja_test",
@@ -998,8 +1098,12 @@ class Ninja(Package):
 
 
 class Meson(Package):
+    tarball_url = (
+        "https://github.com/mesonbuild/meson/releases/download/1.0.0/meson-1.0.0.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}",
                 "pip3 install --no-index --find-links dist meson",
@@ -1012,9 +1116,12 @@ class Meson(Package):
 
 
 class Coreutils(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/coreutils/coreutils-9.1.tar.xz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/coreutils-9.1-i18n-1.patch"
+
     def _inner_build(self):
         self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
-        self._run_commands(
+        utils.run_commands(
             [
                 "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
                 "autoreconf -fiv",
@@ -1028,9 +1135,9 @@ class Coreutils(Package):
             "/etc/group", utils.read_file("/etc/group") + ["dummy:x:102:tester"]
         )
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
+        utils.run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
         utils.write_file("/etc/group", utils.read_file("/etc/group")[:-1])
-        self._run("make install")
+        utils.run("make install")
         os.replace("/usr/bin/chroot", "/usr/sbin/chroot")
         utils.ensure_dir("/usr/share/man/man8")
         os.replace("/usr/share/man/man1/chroot.1", "/usr/share/man/man8/chroot.8")
@@ -1040,8 +1147,12 @@ class Coreutils(Package):
 
 
 class Check(Package):
+    tarball_url = (
+        "https://github.com/libcheck/check/releases/download/0.15.2/check-0.15.2.tar.gz"
+    )
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static",
                 "make",
@@ -1052,8 +1163,10 @@ class Check(Package):
 
 
 class Diffutils(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/diffutils/diffutils-3.9.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1064,9 +1177,11 @@ class Diffutils(Package):
 
 
 class Gawk(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gawk/gawk-5.2.1.tar.xz"
+
     def _inner_build(self):
         utils.modify("Makefile.in", lambda line, _: line.replace("extras", ""))
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1082,25 +1197,31 @@ class Gawk(Package):
 
 
 class Findutils(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/findutils/findutils-4.9.0.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             ["./configure --prefix=/usr --localstatedir=/var/lib/locate", "make"]
         )
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make check")
-        self._run("make install")
+        utils.run_as_tester("make check")
+        utils.run("make install")
 
 
 class Groff(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/groff/groff-1.22.4.tar.gz"
+
     def _inner_build(self):
         self.env["PAGE"] = "letter"
-        self._run_commands(["./configure --prefix=/usr", "make", "make install"])
+        utils.run_commands(["./configure --prefix=/usr", "make", "make install"])
         del self.env["PAGE"]
 
 
 class Gzip(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/gzip/gzip-1.12.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1111,10 +1232,14 @@ class Gzip(Package):
 
 
 class Iproute(Package):
+    tarball_url = (
+        "https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-6.1.0.tar.xz"
+    )
+
     def _inner_build(self):
         utils.modify("Makefile", lambda line, _: "" if "ARPD" in line else line)
         utils.ensure_removal("man/man8/arpd.8")
-        self._run_commands(
+        utils.run_commands(
             [
                 "make NETNS_RUN_DIR=/run/netns",
                 "make SBINDIR=/usr/sbin install",
@@ -1127,8 +1252,11 @@ class Iproute(Package):
 
 
 class Kbd(Package):
+    tarball_url = "https://www.kernel.org/pub/linux/utils/kbd/kbd-2.5.1.tar.xz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/kbd-2.5.1-backspace-1.patch"
+
     def _inner_build(self):
-        self._run("patch -Np1 -i /sources/kbd-2.5.1-backspace-1.patch")
+        self.apply_patch()
         utils.modify(
             "configure",
             lambda line, _: line.replace("yes", "no")
@@ -1139,7 +1267,7 @@ class Kbd(Package):
             "docs/man/man8/Makefile.in",
             lambda line, _: line.replace("resizecons.8 ", ""),
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-vlock",
                 "make",
@@ -1152,8 +1280,10 @@ class Kbd(Package):
 
 
 class Libpipeline(Package):
+    tarball_url = "https://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.5.7.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1164,6 +1294,8 @@ class Libpipeline(Package):
 
 
 class Make(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/make/make-4.4.tar.gz"
+
     def _inner_build(self):
         utils.modify(
             "src/main.c",
@@ -1173,7 +1305,7 @@ class Make(Package):
                 "#undef  FATAL_SIG", "FATAL_SIG (SIGPIPE);\n#undef  FATAL_SIG"
             ),
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1184,8 +1316,10 @@ class Make(Package):
 
 
 class Patch(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/patch/patch-2.7.6.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1196,9 +1330,11 @@ class Patch(Package):
 
 
 class Tar(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/tar/tar-1.34.tar.xz"
+
     def _inner_build(self):
         self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1211,8 +1347,10 @@ class Tar(Package):
 
 
 class Texinfo(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/texinfo/texinfo-7.0.2.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1224,13 +1362,15 @@ class Texinfo(Package):
 
 
 class Vim(Package):
+    tarball_url = "https://anduin.linuxfromscratch.org/LFS/vim-9.0.1273.tar.xz"
+
     def _inner_build(self):
         utils.write_file(
             "src/feature.h",
             utils.read_file("src/feature.h")
             + ['\n#define SYS_VIMRC_FILE "/etc/vimrc"'],
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr",
                 "make",
@@ -1239,14 +1379,16 @@ class Vim(Package):
 
         utils.chown_tree(".", "tester")
         self.env["LANG"] = "en_US.UTF-8"
-        self._run_as_tester("make -j1 test")
+        utils.run_as_tester("make -j1 test")
         del self.env["LANG"]
 
-        self._run("make install")
+        utils.run("make install")
         utils.ensure_symlink("../vim/vim90/doc", "/usr/share/doc/vim-9.0.1273")
 
 
 class Eudev(Package):
+    tarball_url = "https://github.com/eudev-project/eudev/releases/download/v3.2.11/eudev-3.2.11.tar.gz"
+
     def _inner_build(self):
         utils.modify(
             "src/udev/udev.pc.in",
@@ -1254,7 +1396,7 @@ class Eudev(Package):
             if "udevdir" in line
             else line,
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --bindir=/usr/sbin "
                 "--sysconfdir=/etc --enable-manpages --disable-static ",
@@ -1263,7 +1405,7 @@ class Eudev(Package):
         )
         utils.ensure_dir("/usr/lib/udev/rules.d")
         utils.ensure_dir("/etc/udev/rules.d")
-        self._run_commands(
+        utils.run_commands(
             [
                 "make check",
                 "make install",
@@ -1275,12 +1417,12 @@ class Eudev(Package):
 
 
 class ManDb(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "man-db"
-
+    tarball_url = (
+        "https://download.savannah.gnu.org/releases/man-db/man-db-2.11.2.tar.xz"
+    )
+ 
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr "
                 "--docdir=/usr/share/doc/man-db-2.11.2 --sysconfdir=/etc "
@@ -1296,8 +1438,10 @@ class ManDb(Package):
 
 
 class Procps(Package):
+    tarball_url = "https://sourceforge.net/projects/procps-ng/files/Production/procps-ng-4.0.2.tar.xz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr "
                 "--docdir=/usr/share/doc/procps-ng-4.0.2 --disable-static "
@@ -1310,12 +1454,10 @@ class Procps(Package):
 
 
 class UtilLinux(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "util-linux"
+    tarball_url = "https://www.kernel.org/pub/linux/utils/util-linux/v2.38/util-linux-2.38.1.tar.xz"
 
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure ADJTIME_PATH=/var/lib/hwclock/adjtime "
                 "--bindir=/usr/bin --libdir=/usr/lib --sbindir=/usr/sbin "
@@ -1328,14 +1470,16 @@ class UtilLinux(Package):
             ]
         )
         utils.chown_tree(".", "tester")
-        self._run_as_tester("make -k check")
-        self._run("make install")
+        utils.run_as_tester("make -k check")
+        utils.run("make install")
 
 
 class E2fsprog(Package):
+    tarball_url = "https://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.47.0/e2fsprogs-1.47.0.tar.gz"
+
     def _inner_build(self):
-        self._create_and_enter_build_dir()
-        self._run_commands(
+        self.create_and_enter_build_dir()
+        utils.run_commands(
             [
                 "../configure --prefix=/usr --sysconfdir=/etc "
                 "--enable-elf-shlibs --disable-libblkid --disable-libuuid "
@@ -1347,7 +1491,7 @@ class E2fsprog(Package):
         )
         for archive in ["libcom_err", "libe2p", "libext2fs", "libss"]:
             utils.ensure_removal(f"/usr/lib/{archive}.a")
-        self._run_commands(
+        utils.run_commands(
             [
                 "gunzip -v /usr/share/info/libext2fs.info.gz",
                 "install-info --dir-file=/usr/share/info/dir "
@@ -1364,13 +1508,17 @@ class E2fsprog(Package):
 
 
 class Sysklogd(Package):
+    tarball_url = (
+        "https://www.infodrom.org/projects/sysklogd/download/sysklogd-1.5.1.tar.gz"
+    )
+
     def _inner_build(self):
         utils.modify(
             "ksym_mod.c",
             lambda line, i: line + " " * 16 + "fclose(ksyms);\n" if i == 191 else line,
         )
         utils.modify("syslogd.c", lambda line, _: line.replace("union wait", "int"))
-        self._run_commands(
+        utils.run_commands(
             [
                 "make",
                 "make BINDIR=/sbin install",
@@ -1379,10 +1527,13 @@ class Sysklogd(Package):
 
 
 class Sysvinit(Package):
+    tarball_url = "https://github.com/slicer69/sysvinit/releases/download/3.06/sysvinit-3.06.tar.xz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/sysvinit-3.06-consolidated-1.patch"
+
     def _inner_build(self):
-        self._run_commands(
+        self.apply_patch()
+        utils.run_commands(
             [
-                "patch -Np1 -i /sources/sysvinit-3.06-consolidated-1.patch",
                 "make",
                 "make install",
             ]
@@ -1390,19 +1541,19 @@ class Sysvinit(Package):
 
 
 class LfsBootscripts(Package):
-    def __init__(self, root, ft):
-        super().__init__(root, ft)
-        self.search_term = "lfs-bootscripts"
+    tarball_url = "https://www.linuxfromscratch.org/lfs/downloads/11.3/lfs-bootscripts-20230101.tar.xz"
 
     def _inner_build(self):
-        self._run("make install")
+        utils.run("make install")
 
 
 class Linux(Package):
+    tarball_url = "https://anduin.linuxfromscratch.org/LFS/vim-9.0.1273.tar.xz"
+
     def _inner_build(self):
-        self._run("make mrproper")
+        utils.run("make mrproper")
         shutil.copy("/kernel-config", ".config")
-        self._run_commands(
+        utils.run_commands(
             [
                 "make",
                 "make modules_install",
@@ -1410,22 +1561,26 @@ class Linux(Package):
         )
         shutil.copy("arch/x86/boot/bzImage", "/boot/vmlinuz-6.1.11-lfs-11.3")
         shutil.copy("System.map", "/boot/System.map-6.1.11")
-        self._run("install -d /usr/share/doc/linux-6.1.11")
+        utils.run("install -d /usr/share/doc/linux-6.1.11")
         shutil.copytree(
             "Documentation", "/usr/share/doc/linux-6.1.11", dirs_exist_ok=True
         )
 
-        self._run("install -v -m755 -d /etc/modprobe.d")
-        utils.write_file("/etc/modprobe.d/usb.conf",
-            ["install ohci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i ohci_hcd ; true\n",
-             "install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true\n",
-            ]
+        utils.run("install -v -m755 -d /etc/modprobe.d")
+        utils.write_file(
+            "/etc/modprobe.d/usb.conf",
+            [
+                "install ohci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i ohci_hcd ; true\n",
+                "install uhci_hcd /sbin/modprobe ehci_hcd ; /sbin/modprobe -i uhci_hcd ; true\n",
+            ],
         )
 
 
 class Mandoc(Package):
+    tarball_url = "https://mandoc.bsd.lv/snapshots/mandoc-1.14.6.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure",
                 "make mandoc",
@@ -1436,13 +1591,16 @@ class Mandoc(Package):
 
 
 class Efivar(Package):
+    tarball_url = (
+        "https://github.com/rhboot/efivar/releases/download/38/efivar-38.tar.bz2"
+    )
+
     def _inner_build(self):
         utils.modify(
             "src/Makefile",
-            lambda line, _: f"{line}\ttouch prep\n" 
-                if "prep :" in line else line
+            lambda line, _: f"{line}\ttouch prep\n" if "prep :" in line else line,
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "make",
                 "make install LIBDIR=/usr/lib",
@@ -1451,8 +1609,10 @@ class Efivar(Package):
 
 
 class Popt(Package):
+    tarball_url = "http://ftp.rpm.org/popt/releases/popt-1.x/popt-1.19.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --disable-static",
                 "make",
@@ -1462,8 +1622,10 @@ class Popt(Package):
 
 
 class Efibootmgr(Package):
+    tarball_url = "https://github.com/rhboot/efibootmgr/archive/18/efibootmgr-18.tar.gz"
+
     def _inner_build(self):
-        self._run_commands(
+        utils.run_commands(
             [
                 "make EFIDIR=LFS EFI_LOADER=grubx64.efi",
                 "make install EFIDIR=LFS",
@@ -1472,20 +1634,22 @@ class Efibootmgr(Package):
 
 
 class Freetype(Package):
+    tarball_url = "https://downloads.sourceforge.net/freetype/freetype-2.13.0.tar.xz"
+
     def _inner_build(self):
         utils.modify(
             "modules.cfg",
-            lambda line, _: line.replace("# ", "") 
-                if "AUX_MODULES" in line and
-                "valid" in line
-                else line
+            lambda line, _: line.replace("# ", "")
+            if "AUX_MODULES" in line and "valid" in line
+            else line,
         )
         utils.modify(
             "include/freetype/config/ftoption.h",
             lambda line, _: line.replace("/*", "").replace("*/", "")
-                if "SUBPIXEL_RENDERING" in line else line
+            if "SUBPIXEL_RENDERING" in line
+            else line,
         )
-        self._run_commands(
+        utils.run_commands(
             [
                 "./configure --prefix=/usr --enable-freetype-config "
                 "--disable-static",
@@ -1497,14 +1661,18 @@ class Freetype(Package):
 
 # TODO: fix unifont-pcf tarball preservation
 class Grub(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/grub/grub-2.06.tar.xz"
+    patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/grub-2.06-upstream_fixes-1.patch"
+
     def _inner_build(self):
         utils.ensure_dir("/usr/share/fonts/unifont")
-        self._run("gunzip /sources/unifont-15.0.01.pcf.gz")
-        os.rename("/sources/unifont-15.0.01.pcf",
-            "/usr/share/fonts/unifont/unifont.pcf")
-        self._run_commands(
+        utils.run("gunzip /sources/unifont-15.0.01.pcf.gz")
+        os.rename(
+            "/sources/unifont-15.0.01.pcf", "/usr/share/fonts/unifont/unifont.pcf"
+        )
+        self.apply_patch()
+        utils.run_commands(
             [
-                "patch -Np1 -i /sources/grub-2.06-upstream_fixes-1.patch",
                 "./configure --prefix=/usr --sysconfdir=/etc --disable-efiemu "
                 "--enable-grub-mkfont --with-platform=efi --target=x86_64 "
                 "--disable-werror ",
@@ -1512,12 +1680,12 @@ class Grub(Package):
                 "make install",
             ]
         )
-        os.rename("/etc/bash_completion.d/grub",
-            "/usr/share/bash-completion/completions/grub")
+        os.rename(
+            "/etc/bash_completion.d/grub", "/usr/share/bash-completion/completions/grub"
+        )
 
 
-
-main_build_packages = [
+packages = [
     ManPages,
     IanaEtc,
     Glibc,
@@ -1593,7 +1761,6 @@ main_build_packages = [
     Sysvinit,
     LfsBootscripts,
     Linux,
-
     Mandoc,
     Efivar,
     Popt,

@@ -3,7 +3,7 @@ import subprocess, os, shutil, sys
 import utils
 
 
-def remove_source_dirs():
+def remove_source_trees():
     for d in [
         tarball.split(".tar")[0]
         for tarball in os.listdir("sources")
@@ -43,28 +43,21 @@ def _clean_etc():
     contents = os.listdir("etc")
     for item in contents:
         if item not in [
+            "fstab",
             "group",
             "hosts",
-            "inittab" "passwd",
+            "inittab",
+            "nsswitch.conf",
+            "passwd",
             "profile",
             "shells",
-            "nsswitch.conf",
             "syslog.conf",
         ]:
             utils.ensure_removal(f"etc/{item}")
 
 
-def _umount_vkfs():
-    """Run outside the chroot please!"""
-    for d in os.listdir("dev"):
-        subprocess.run(f"umount dev/{d}".split())
-    for d in ["dev", "proc", "sys", "run"]:
-        subprocess.run(f"umount {d}".split())
-
-
 def clean():
-    # _umount_vkfs()
-    remove_source_dirs()
+    remove_source_trees()
     _remove_sys_dirs()
     _clean_etc()
 

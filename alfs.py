@@ -1,118 +1,66 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S -i python3
 
-import os, subprocess, shutil, time, stat
+# TODO:
+# remove dockerfile dependencies
+# consolidate dir touching to ensure_directory_skeleton
+# try running over an already fully built system
+# check git for which etc files to keep / remove
+
+import os
+import subprocess
+import shutil
+import stat
+import signal
 from urllib.request import urlopen
 
 import utils
-from clean import remove_source_dirs
-from cross_toolchain import cross_toolchain_packages
-from temp_tools import temp_tools_packages, chroot_temp_tools_packages
-from main_build import main_build_packages
-
-SYS_DIRS = ["var", "usr", "etc", "lib64", "tools", "boot"]
+from file_tracker import FileTracker
+from clean import remove_source_trees
+import temporary_environment
+import core
 
 
-def _ensure_wget_list():
-    if not os.path.exists("wget-list"):
-        res = urlopen("https://www.linuxfromscratch.org/lfs/downloads/stable/wget-list")
-        urls = res.read().decode().split("\n")
-        urls = [url for url in urls if "tcl8.6.13-html" not in url]
-        utils.write_file("wget-list", "\n".join(urls))
-
-
-def _ensure_directory_skeleton():
-    for d in SYS_DIRS:
+def ensure_directory_skeleton():
+    for d in FileTracker.tracked_trees + ["dev", "proc", "sys", "run"]:
         utils.ensure_dir(d)
-    for extra in ["sources", "package-records", "usr/bin", "usr/lib", "usr/sbin"]:
-        utils.ensure_dir(extra)
     for d in ["bin", "lib", "sbin"]:
         utils.ensure_dir(f"usr/{d}")
         utils.ensure_symlink(f"usr/{d}", f"{os.getcwd()}/{d}")
+    utils.ensure_dir("sources")
 
 
-def _ensure_tarballs_downloaded():
-    tarball_urls = [line.split("\n")[0] for line in utils.read_file("wget-list")]
-    for url in tarball_urls:
-        tarball_name = url.split("/")[-1]
-        if not os.path.exists("sources/" + tarball_name):
-            if tarball_name == "tcl8.6.13-src.tar.gz":
-                if os.path.exists("sources/tcl8.6.13.tar.gz"):
-                    continue
-            print("downloading " + tarball_name + "...")
-            res = urlopen(url)
-            with open("sources/" + tarball_name, "wb") as f:
-                f.write(res.read())
-
-    if not os.path.exists("sources/tcl8.6.13.tar.gz"):
-        os.rename("sources/tcl8.6.13-src.tar.gz", "sources/tcl8.6.13.tar.gz")
-
-
-def setup():
-    _ensure_wget_list()
-    _ensure_directory_skeleton()
-    _ensure_tarballs_downloaded()
-    remove_source_dirs()
+def ensure_sources_downloaded():
+    urls = set()
+    for package in (
+        temporary_environment.cross_toolchain
+        + temporary_environment.temporary_tools
+        + temporary_environment.chroot_temporary_tools
+        + core.packages
+    ):
+        urls.add(package.tarball_url)
+        if hasattr(package, "patch_url"):
+            urls.add(package.patch_url)
+    for url in urls:
+        filename = url.split("/")[-1]
+        if not os.path.exists(f"sources/{filename}"):
+            print(f"downloading {filename}...")
+            with open(f"sources/{filename}", "wb") as f:
+                f.write(urlopen(url).read())
 
 
-class FileTracker:
-    def __init__(self, root_dir):
-        self.root_dir = root_dir
-        self.recorded_files = self._system_snapshot()
-
-    def _system_snapshot(self):
-        os.chdir(self.root_dir)
-        all_files = set()
-        for d in SYS_DIRS:
-            for curr_dir, _, files in os.walk(d):
-                for file in files:
-                    full_path = f"{curr_dir}/{file}"
-                    if os.path.isfile(full_path):
-                        all_files.add(full_path)
-        return all_files
-
-    def _update_recorded_files(self):
-        self.recorded_files = self._system_snapshot()
-
-    def record_new_files_since(self, start_time, target_name):
-        self._update_recorded_files()
-
-        new_files = set()
-        for file in self.recorded_files:
-            if os.stat(file).st_mtime > start_time:
-                new_files.add(file)
-
-        utils.write_file(
-            f"{self.root_dir}/package-records/{target_name}",
-            sorted([f"{file}\n" for file in new_files]),
-        )
-
-    def query_record_existence(self, target_name):
-        return os.path.exists(f"{self.root_dir}/package-records/{target_name}")
+def mount_vkfs():
+    for d in ["dev", "dev/pts"]:
+        subprocess.run(f"mount -v --bind /{d} {os.getcwd()}/{d}".split())
+    for fs_type, d in [("proc", "proc"), ("sysfs", "sys"), ("tmpfs", "run")]:
+        subprocess.run(f"mount -vt {fs_type} {fs_type} " f"{os.getcwd()}/{d}".split())
 
 
-def _mount_vkfs(root_dir):
-    """Mount Virtual Kernel Filesystems"""
-    for d in ["dev", "proc", "sys", "run"]:
-        utils.ensure_dir(f"{root_dir}/{d}")
-    for command in [
-        f"mount -v --bind /dev {root_dir}/dev",
-        f"mount -v --bind /dev/pts {root_dir}/dev/pts",
-        f"mount -vt proc proc {root_dir}/proc",
-        f"mount -vt sysfs sysfs {root_dir}/sys",
-        f"mount -vt tmpfs tmpfs {root_dir}/run",
-    ]:
-        ret = subprocess.run(command.split())
+def unmount_vkfs():
+    for d in ["dev/pts", "dev", "proc", "sys", "run"]:
+        subprocess.run(f"umount -f {d}".split())
 
 
-def _enter_chroot(root_dir):
-    os.chdir(root_dir)
-    os.chroot(root_dir)
-    for var in os.environ:
-        del os.environ[var]
-    os.environ["PATH"] = "/usr/bin:/usr/sbin"
-
-
-def _make_additional_dirs():
+def ensure_directory_skeleton_two():
     chroot_dirs = [
         "home/tester",
         "mnt",
@@ -123,7 +71,7 @@ def _make_additional_dirs():
         "usr/lib/firmware",
     ]
     chroot_dirs += ["etc/" + d for d in ["opt", "sysconfig"]]
-    chroot_dirs += ["media/" + d for d in ["floppy", "cdrom"]]
+    # chroot_dirs += ["media/" + d for d in ["floppy", "cdrom"]]
     chroot_dirs += ["usr/local/" + d for d in ["bin", "lib", "sbin"]]
     for prefix in ["usr/", "usr/local/"]:
         chroot_dirs += [prefix + d for d in ["include", "src"]]
@@ -152,32 +100,20 @@ def _make_additional_dirs():
 
     utils.ensure_symlink("/run", "/var/run")
     utils.ensure_symlink("/run/lock", "/var/lock")
-
     # No way to set sticky bit with os.chmod
     subprocess.run("chmod 1777 /tmp /var/tmp".split(), check=True)
-
     shutil.chown("/home/tester", user="tester")
-
     for file in ["btmp", "lastlog", "faillog", "wtmp"]:
         utils.ensure_touch(f"/var/log/{file}")
-
     shutil.chown("/var/log/lastlog", group="utmp")
-
     os.chmod(
         "/var/log/lastlog",
         stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IWGRP | stat.S_IROTH,
     )
-
     os.chmod("/var/log/btmp", stat.S_IRUSR | stat.S_IWUSR)
 
 
-def prepare_and_enter_chroot(root_dir):
-    _mount_vkfs(root_dir)
-    _enter_chroot(root_dir)
-    _make_additional_dirs()
-
-
-def clean_temp_system():
+def remove_excess_temporary_tools():
     for d in ["info", "man", "doc"]:
         shutil.rmtree(f"/usr/share/{d}")
         os.mkdir(f"/usr/share/{d}")
@@ -190,19 +126,41 @@ def clean_temp_system():
 
 
 if __name__ == "__main__":
-    setup()
-    base_dir = os.getcwd()
-    ft = FileTracker(base_dir)
-    for package in cross_toolchain_packages + temp_tools_packages:
-        package(base_dir, ft).build()
+    os.environ["PATH"] = f"{os.getcwd()}/tools/bin:/usr/bin"
+    # os.environ["LC_ALL"] = "POSIX"
+    # os.environ["CONFIG_SITE"] = f"{os.getcwd()}/usr/share/config.site"
+    ensure_directory_skeleton()
+    remove_source_trees()
+    ensure_sources_downloaded()
 
-    prepare_and_enter_chroot(base_dir)
-    base_dir = "/"
-    ft.root_dir = "/"
-    for package in chroot_temp_tools_packages:
-        package(base_dir, ft).build()
-    clean_temp_system()
-    for package in main_build_packages:
-        package(base_dir, ft).build()
-    utils.ensure_dir("/boot/efi")
+    ft = FileTracker(f"{os.getcwd()}/")
 
+    def build(packages):
+        for package in packages:
+            package(ft).build()
+
+    ft.tracked_trees.append("tools")
+    build(temporary_environment.cross_toolchain + temporary_environment.temporary_tools)
+
+    mount_vkfs()
+
+    parent_pid = os.getpid()
+    if os.fork() != 0:
+        def signal_handler(signum, frame):
+            pass
+        signal.signal(signal.SIGCHLD, signal_handler)
+        signum = signal.sigwait([signal.SIGCHLD])
+        unmount_vkfs()
+        exit()
+
+    try:
+        os.chroot(".")
+        os.environ["PATH"] = "/usr/bin:/usr/sbin"
+        ensure_directory_skeleton_two()
+        ft.root_dir = "/"
+        build(temporary_environment.chroot_temporary_tools)
+        remove_excess_temporary_tools()
+        ft.tracked_trees.remove("tools")
+        # build(core.packages)
+    finally:
+        os.kill(parent_pid, signal.SIGCHLD)
