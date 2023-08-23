@@ -1,6 +1,7 @@
 #!/usr/bin/env -S -i python3
 
 # TODO:
+# README
 # remove dockerfile dependencies
 # consolidate dir touching to ensure_directory_skeleton
 # try running over an already fully built system
@@ -40,6 +41,9 @@ def ensure_sources_downloaded():
         urls.add(package.tarball_url)
         if hasattr(package, "patch_url"):
             urls.add(package.patch_url)
+        if hasattr(package, "extra_urls"):
+            for extra in package.extra_urls:
+                urls.add(extra)
     for url in urls:
         filename = url.split("/")[-1]
         if not os.path.exists(f"sources/{filename}"):
@@ -161,6 +165,6 @@ if __name__ == "__main__":
         build(temporary_environment.chroot_temporary_tools)
         remove_excess_temporary_tools()
         ft.tracked_trees.remove("tools")
-        # build(core.packages)
+        build(core.packages)
     finally:
         os.kill(parent_pid, signal.SIGCHLD)

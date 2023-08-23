@@ -43,7 +43,7 @@ class Package:
             self.file_tracker.record_new_files_since(start_time, self.name())
 
     def apply_patch(self):
-        self._run(
+        utils.run(
             "patch -Np1 -i "
             f"{self.root_dir()}/sources/{self.patch_url.split('/')[-1]}"
         )

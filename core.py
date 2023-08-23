@@ -22,6 +22,7 @@ class IanaEtc(Package):
 class Glibc(Package):
     tarball_url = "https://ftp.gnu.org/gnu/glibc/glibc-2.37.tar.xz"
     patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/glibc-2.37-fhs-1.patch"
+    extra_urls = ["https://www.iana.org/time-zones/repository/releases/tzdata2022g.tar.gz"]
 
     def _inner_build(self):
         self.apply_patch()
@@ -56,14 +57,12 @@ class Glibc(Package):
             lambda line, i: line.replace("/usr", "/") if i == 28 else line,
         )
         shutil.copy("../nscd/nscd.conf", "/etc")
-        os.makedirs("/var/cache/nscd")
-        os.makedirs("/usr/lib/locale")
+        utils.ensure_dir("/var/cache/nscd")
+        utils.ensure_dir("/usr/lib/locale")
 
         utils.run("make localedata/install-locales")
-        subprocess.run("localedef -i POSIX -f UTF-8 C.UTF-8".split(), env=self.env)
-        subprocess.run(
-            "localedef -i ja_JP -f SHIFT_JIS ja_JP.SJIS".split(), env=self.env
-        )
+        subprocess.run("localedef -i POSIX -f UTF-8 C.UTF-8".split())
+        subprocess.run("localedef -i ja_JP -f SHIFT_JIS ja_JP.SJIS".split())
         utils.run("tar -xvf /sources/tzdata2022g.tar.gz")
         zoneinfo = "/usr/share/zoneinfo"
         for d in ["posix", "right"]:
@@ -357,7 +356,7 @@ class Binutils(Package):
             ]
         )
 
-        subprocess.run("make -k check".split(), env=self.env)
+        subprocess.run("make -k check".split())
         errors = {}
         for root, dirs, files in os.walk("."):
             for file in files:
@@ -560,7 +559,6 @@ class Gcc(Package):
         report = subprocess.run(
             "../contrib/test_summary".split(),
             check=True,
-            env=self.env,
             capture_output=True,
         ).stdout.decode()
         utils.write_file("/gcc-report", [f"{line}\n" for line in report.split("\n")])
@@ -571,7 +569,6 @@ class Gcc(Package):
             subprocess.run(
                 "gcc -dumpmachine".split(),
                 check=True,
-                env=self.env,
                 capture_output=True,
             )
             .stdout.decode()
@@ -593,7 +590,6 @@ class Gcc(Package):
         utils.write_file("dummy.c", "int main(){}")
         cc_output = subprocess.run(
             "cc dummy.c -v -Wl,--verbose".split(),
-            env=self.env,
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -604,7 +600,6 @@ class Gcc(Package):
             "[Requesting program interpreter: /lib64/ld-linux-x86-64.so.2]"
             in subprocess.run(
                 "readelf -l a.out".split(),
-                env=self.env,
                 check=True,
                 capture_output=True,
             ).stdout.decode()
@@ -884,8 +879,8 @@ class Perl(Package):
     tarball_url = "https://www.cpan.org/src/5.0/perl-5.36.0.tar.xz"
 
     def _inner_build(self):
-        self.env["BUILD_ZLIB"] = "False"
-        self.env["BUILD_BZIP2"] = "0"
+        os.environ["BUILD_ZLIB"] = "False"
+        os.environ["BUILD_BZIP2"] = "0"
         config_command = (
             "sh Configure -des -Dprefix=/usr -Dvendorprefix=/usr "
             "-Dprivlib=/usr/lib/perl5/5.36/core_perl "
@@ -900,7 +895,7 @@ class Perl(Package):
             "-Duseshrplib -Dusethreads "
         ).split()
         config_command[-3] = '-Dpager="/usr/bin/less -isR"'
-        subprocess.run(config_command, env=self.env, check=True)
+        subprocess.run(config_command, check=True)
         utils.run_commands(
             [
                 "make",
@@ -908,8 +903,8 @@ class Perl(Package):
                 "make install",
             ]
         )
-        del self.env["BUILD_ZLIB"]
-        del self.env["BUILD_BZIP2"]
+        del os.environ["BUILD_ZLIB"]
+        del os.environ["BUILD_BZIP2"]
 
 
 class XmlParser(Package):
@@ -1071,9 +1066,9 @@ class Wheel(Package):
     tarball_url = "https://pypi.org/packages/source/w/wheel/wheel-0.38.4.tar.gz"
 
     def _inner_build(self):
-        self.env["PYTHONPATH"] = "src"
+        os.environ["PYTHONPATH"] = "src"
         utils.run("pip3 wheel -w dist --no-build-isolation --no-deps " f"{os.getcwd()}")
-        del self.env["PYTHONPATH"]
+        del os.environ["PYTHONPATH"]
         utils.run("pip3 install --no-index --find-links=dist wheel")
 
 
@@ -1120,7 +1115,7 @@ class Coreutils(Package):
     patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/coreutils-9.1-i18n-1.patch"
 
     def _inner_build(self):
-        self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
+        os.environ["FORCE_UNSAFE_CONFIGURE"] = "1"
         utils.run_commands(
             [
                 "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
@@ -1130,7 +1125,7 @@ class Coreutils(Package):
                 "make NON_ROOT_USERNAME=tester check-root",
             ]
         )
-        del self.env["FORCE_UNSAFE_CONFIGURE"]
+        del os.environ["FORCE_UNSAFE_CONFIGURE"]
         utils.write_file(
             "/etc/group", utils.read_file("/etc/group") + ["dummy:x:102:tester"]
         )
@@ -1188,7 +1183,7 @@ class Gawk(Package):
                 "make check",
             ]
         )
-        subprocess.run(["make", "LN='ln -f'", "install"], check=True, env=self.env)
+        subprocess.run(["make", "LN='ln -f'", "install"], check=True)
         utils.ensure_dir("/usr/share/doc/gawk-5.2.1")
         shutil.copy("doc/awkforai.txt", "/usr/share/doc/gawk-5.2.1")
         for file in os.listdir("doc"):
@@ -1212,9 +1207,9 @@ class Groff(Package):
     tarball_url = "https://ftp.gnu.org/gnu/groff/groff-1.22.4.tar.gz"
 
     def _inner_build(self):
-        self.env["PAGE"] = "letter"
+        os.environ["PAGE"] = "letter"
         utils.run_commands(["./configure --prefix=/usr", "make", "make install"])
-        del self.env["PAGE"]
+        del os.environ["PAGE"]
 
 
 class Gzip(Package):
@@ -1333,7 +1328,7 @@ class Tar(Package):
     tarball_url = "https://ftp.gnu.org/gnu/tar/tar-1.34.tar.xz"
 
     def _inner_build(self):
-        self.env["FORCE_UNSAFE_CONFIGURE"] = "1"
+        os.environ["FORCE_UNSAFE_CONFIGURE"] = "1"
         utils.run_commands(
             [
                 "./configure --prefix=/usr",
@@ -1343,7 +1338,7 @@ class Tar(Package):
                 "make -C doc install-html docdir=/usr/share/doc/tar-1.34",
             ]
         )
-        del self.env["FORCE_UNSAFE_CONFIGURE"]
+        del os.environ["FORCE_UNSAFE_CONFIGURE"]
 
 
 class Texinfo(Package):
@@ -1378,9 +1373,9 @@ class Vim(Package):
         )
 
         utils.chown_tree(".", "tester")
-        self.env["LANG"] = "en_US.UTF-8"
+        os.environ["LANG"] = "en_US.UTF-8"
         utils.run_as_tester("make -j1 test")
-        del self.env["LANG"]
+        del os .environ["LANG"]
 
         utils.run("make install")
         utils.ensure_symlink("../vim/vim90/doc", "/usr/share/doc/vim-9.0.1273")

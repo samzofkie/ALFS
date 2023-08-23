@@ -153,7 +153,7 @@ class TempM4(PreChrootPackage):
                 f"./configure --prefix=/usr --host={self.lfs_triplet} "
                 f"--build={self.host_triplet} ",
                 "make",
-                f"make DESTDIR={self.root_dir()}",
+                f"make DESTDIR={self.root_dir()} install",
             ]
         )
 
@@ -286,7 +286,7 @@ class TempGawk(PreChrootPackage):
                 f"./configure --prefix=/usr --host={self.lfs_triplet} "
                 f" --build={self.host_triplet} ",
                 "make",
-                f"make DESTDIR{self.root_dir()} install",
+                f"make DESTDIR={self.root_dir()} install",
             ] 
         )
 
@@ -411,7 +411,7 @@ class TempBinutils(PreChrootPackage):
         self.create_and_enter_build_dir()
         utils.run_commands(
             [
-                f"./configure --prefix=/usr --host={self.lfs_triplet} "
+                f"../configure --prefix=/usr --host={self.lfs_triplet} "
                 f" --build={self.host_triplet} --disable-nls --enable-shared "
                 "--enable-gprofng=no --disable-werror --enable-64-bit-bfd ",
                 "make",
