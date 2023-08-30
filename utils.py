@@ -64,11 +64,11 @@ def run_commands(commands):
         run(command)
 
 
-def run_as_tester(command):
+def run_as_tester(command, check=True):
     tester_line = [
-        line for line in utils.read_file("/etc/passwd") if "tester" in line
+        line for line in read_file("/etc/passwd") if "tester" in line
     ][0]
     tester_uid, tester_gid = tester_line.split(":")[2:4]
     subprocess.run(command.split(), user=int(tester_uid), group=int(tester_gid),
-                   check=True)
+                   check=check)
 

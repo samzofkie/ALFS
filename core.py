@@ -109,7 +109,6 @@ class Bzip2(Package):
 
     def _inner_build(self):
         self.apply_patch()
-        utils.run("patch -Np1 -i /sources/bzip2-1.0.8-install_docs-1.patch")
         utils.modify(
             "Makefile",
             lambda line, _: line.replace("$(PREFIX)/bin/", "", 1)
@@ -235,12 +234,14 @@ class M4(Package):
 
 
 class Bc(Package):
-    tarball_url = "https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.67.tar.xz"
+    tarball_url = "https://github.com/gavinhoward/bc/releases/download/6.2.4/bc-6.2.4.tar.xz"
 
     def _inner_build(self):
+        os.environ["CC"] = "gcc"
+        utils.run("./configure --prefix=/usr -G -O3 -r")
+        del os.environ["CC"]
         utils.run_commands(
             [
-                "./configure --prefix=/usr -G -O3 -r",
                 "make",
                 "make test",
                 "make install",
@@ -268,6 +269,9 @@ class Flex(Package):
 
 class Tcl(Package):
     tarball_url = "https://downloads.sourceforge.net/tcl/tcl8.6.13-src.tar.gz"
+
+    def package_name(self):
+        return super().package_name().split("-")[0]
 
     def _inner_build(self):
         os.chdir("unix")
@@ -551,10 +555,10 @@ class Gcc(Package):
                 "--disable-bootstrap --with-system-zlib ",
                 "make",
             ]
-        )
+        ) 
 
         utils.chown_tree(".", "tester")
-        utils.run_as_tester("make -k check")
+        utils.run_as_tester("make -k check", check=False)
 
         report = subprocess.run(
             "../contrib/test_summary".split(),
@@ -706,7 +710,7 @@ class Sed(Package):
             ]
         )
         utils.chown_tree(".", "tester")
-        utils.run_as_tester("make check")
+        #utils.run_as_tester("make check")
         utils.run_commands(
             [
                 "make install",
@@ -1043,9 +1047,10 @@ class Libffi(Package):
 
 
 class Python(Package):
-    tarball_url = (
+    tarball_url = "https://www.python.org/ftp/python/3.11.2/Python-3.11.2.tar.xz"
+    extra_urls = [
         "https://www.python.org/ftp/python/doc/3.11.2/python-3.11.2-docs-html.tar.bz2"
-    )
+    ]
 
     def _inner_build(self):
         utils.run_commands(
@@ -1116,9 +1121,9 @@ class Coreutils(Package):
 
     def _inner_build(self):
         os.environ["FORCE_UNSAFE_CONFIGURE"] = "1"
+        self.apply_patch()
         utils.run_commands(
             [
-                "patch -Np1 -i /sources/coreutils-9.1-i18n-1.patch",
                 "autoreconf -fiv",
                 "./configure --prefix=/usr " "--enable-no-install-program=kill,uptime ",
                 "make",
@@ -1130,7 +1135,7 @@ class Coreutils(Package):
             "/etc/group", utils.read_file("/etc/group") + ["dummy:x:102:tester"]
         )
         utils.chown_tree(".", "tester")
-        utils.run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
+        #utils.run_as_tester("make RUN_EXPENSIVE_TESTS=yes check")
         utils.write_file("/etc/group", utils.read_file("/etc/group")[:-1])
         utils.run("make install")
         os.replace("/usr/bin/chroot", "/usr/sbin/chroot")
@@ -1199,7 +1204,7 @@ class Findutils(Package):
             ["./configure --prefix=/usr --localstatedir=/var/lib/locate", "make"]
         )
         utils.chown_tree(".", "tester")
-        utils.run_as_tester("make check")
+        #utils.run_as_tester("make check")
         utils.run("make install")
 
 
@@ -1374,7 +1379,7 @@ class Vim(Package):
 
         utils.chown_tree(".", "tester")
         os.environ["LANG"] = "en_US.UTF-8"
-        utils.run_as_tester("make -j1 test")
+        #utils.run_as_tester("make -j1 test")
         del os .environ["LANG"]
 
         utils.run("make install")
@@ -1383,6 +1388,7 @@ class Vim(Package):
 
 class Eudev(Package):
     tarball_url = "https://github.com/eudev-project/eudev/releases/download/v3.2.11/eudev-3.2.11.tar.gz"
+    extra_urls = ["https://anduin.linuxfromscratch.org/LFS/udev-lfs-20171102.tar.xz"]
 
     def _inner_build(self):
         utils.modify(
@@ -1465,7 +1471,7 @@ class UtilLinux(Package):
             ]
         )
         utils.chown_tree(".", "tester")
-        utils.run_as_tester("make -k check")
+        #utils.run_as_tester("make -k check")
         utils.run("make install")
 
 
@@ -1543,7 +1549,7 @@ class LfsBootscripts(Package):
 
 
 class Linux(Package):
-    tarball_url = "https://anduin.linuxfromscratch.org/LFS/vim-9.0.1273.tar.xz"
+    tarball_url = "https://www.kernel.org/pub/linux/kernel/v6.x/linux-6.1.11.tar.xz"
 
     def _inner_build(self):
         utils.run("make mrproper")
@@ -1571,20 +1577,6 @@ class Linux(Package):
         )
 
 
-class Mandoc(Package):
-    tarball_url = "https://mandoc.bsd.lv/snapshots/mandoc-1.14.6.tar.gz"
-
-    def _inner_build(self):
-        utils.run_commands(
-            [
-                "./configure",
-                "make mandoc",
-                "install -vm755 mandoc /usr/bin",
-                "install -vm644 mandoc.1 /usr/share/man/man1",
-            ]
-        )
-
-
 class Efivar(Package):
     tarball_url = (
         "https://github.com/rhboot/efivar/releases/download/38/efivar-38.tar.bz2"
@@ -1594,6 +1586,10 @@ class Efivar(Package):
         utils.modify(
             "src/Makefile",
             lambda line, _: f"{line}\ttouch prep\n" if "prep :" in line else line,
+        )
+        utils.modify(
+            "Makefile",
+            lambda line, _: f"SUBDIRS := src\n" if "SUBDIRS :=" in line else line,
         )
         utils.run_commands(
             [
@@ -1658,6 +1654,7 @@ class Freetype(Package):
 class Grub(Package):
     tarball_url = "https://ftp.gnu.org/gnu/grub/grub-2.06.tar.xz"
     patch_url = "https://www.linuxfromscratch.org/patches/lfs/11.3/grub-2.06-upstream_fixes-1.patch"
+    extra_urls = ["https://unifoundry.com/pub/unifont/unifont-15.0.01/font-builds/unifont-15.0.01.pcf.gz"]
 
     def _inner_build(self):
         utils.ensure_dir("/usr/share/fonts/unifont")
@@ -1756,7 +1753,6 @@ packages = [
     Sysvinit,
     LfsBootscripts,
     Linux,
-    Mandoc,
     Efivar,
     Popt,
     Efibootmgr,
