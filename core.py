@@ -1560,7 +1560,7 @@ class Linux(Package):
                 "make modules_install",
             ]
         )
-        shutil.copy("arch/x86/boot/bzImage", "/boot/vmlinuz-6.1.11-lfs-11.3")
+        shutil.copy("arch/x86/boot/bzImage", "/boot/vmlinuz-6.1.11-alfs-11.3")
         shutil.copy("System.map", "/boot/System.map-6.1.11")
         utils.run("install -d /usr/share/doc/linux-6.1.11")
         shutil.copytree(
@@ -1677,6 +1677,131 @@ class Grub(Package):
         )
 
 
+class Which(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/which/which-2.21.tar.gz"
+
+    def _inner_build(self):
+        utils.run_commands(
+            [
+                "./configure --prefix=/usr",
+                "make",
+                "make install"
+            ]
+        )
+
+
+class LibTasn(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/libtasn1/libtasn1-4.19.0.tar.gz"
+
+    def _inner_build(self):
+        utils.run_commands(
+            [
+                "./configure --prefix=/usr --disable-static",
+                "make",
+                "make install",
+                "make -C doc/reference install-data-local",
+            ]
+        )
+
+
+class P11Kit(Package):
+    tarball_url = "https://github.com/p11-glue/p11-kit/releases/download/0.25.0/p11-kit-0.25.0.tar.xz"
+
+    def _inner_build(self):
+        utils.modify(
+            "p11-kit/modules.c",
+            lambda line, _: line.replace("if (gi)", "if (gi && gi != C_GetInterface)")
+        )
+        utils.modify(
+            "trust/trust-extract-compat",
+            lambda line, i: "" if i >= 20 else line
+        )
+        utils.write_file("trust/trust-extract-compat",
+                   utils.read_file("trust/trust-extract-compat") + [
+                       "# Copy existing anchor modifications to /etc/ssl/local\n",
+                       "/usr/libexec/make-ca/copy-trust-modifications\n\n",
+                       "# Update trust stores\n",
+                       "/usr/sbin/make-ca -r\n", 
+                    ]
+        )
+        self.create_and_enter_build_dir()
+        utils.run_commands(
+            [
+                "meson setup .. --prefix=/usr --buildtype=release "
+                "-Dtrust_paths=/etc/pki/anchors",
+                "ninja",
+                "ninja test",
+                "ninja install",
+            ]
+        )
+        os.symlink("/usr/libexec/p11-kit/trust-extract-compat", "/usr/bin/update-ca-certificates")
+        os.symlink("./pkcs11/p11-kit-trust.so", "/usr/lib/libnssckbi.so")
+
+
+# TODO: why does openssl s_client fail with the -verify_return_error arg?
+class MakeCa(Package):
+    tarball_url = "https://github.com/lfs-book/make-ca/releases/download/v1.12/make-ca-1.12.tar.xz"
+
+    def _inner_build(self):
+        utils.modify(
+            "make-ca",
+            lambda line, _: "#" + line + "\n  echo \"${TEMPDIR}\"\n"
+                if "verify_return_error" in line else line
+        )
+        utils.run_commands(
+            [
+                "make install",
+                "install -vdm755 /etc/ssl/local",
+                "/usr/sbin/make-ca -g",
+            ]
+        )
+
+
+class Wget(Package):
+    tarball_url = "https://ftp.gnu.org/gnu/wget/wget-1.21.4.tar.gz"
+
+    def _inner_build(self):
+        utils.run_commands(
+            [
+                "./configure --prefix=/usr --sysconfdir=/etc --with-ssl=openssl",
+                "make",
+                #"make check",
+                "make install",
+            ]
+        )
+
+
+class PciUtils(Package):
+    tarball_url = "https://mj.ucw.cz/download/linux/pci/pciutils-3.10.0.tar.gz"
+
+    def _inner_build(self):
+        utils.run_commands(
+            [
+                "make PREFIX=/usr SHAREDIR=/usr/share/hwdata SHARED=yes",
+                "make PREFIX=/usr SHAREDIR=/usr/share/hwdata SHARED=yes "
+                "install install-lib",
+            ]
+        )
+        os.chmod("/usr/lib/libpci.so", 0o755)
+        utils.run("update-pciids")
+
+
+class Dhcpcd(Package):
+    tarball_url = "https://github.com/NetworkConfiguration/dhcpcd/releases/download/v10.0.2/dhcpcd-10.0.2.tar.xz"
+
+    def _inner_build(self):
+        utils.run_commands(
+            [
+                "./configure --prefix=/usr --sysconfdir=/etc "
+                "--libexecdir=/usr/lib/dhcpcd --dbdir=/var/lib/dhcpcd "
+                "--runstatedir=/run --disable-privsep ",
+                "make",
+                "make test",
+                "make install",
+            ]
+        )
+
+
 packages = [
     ManPages,
     IanaEtc,
@@ -1758,4 +1883,11 @@ packages = [
     Efibootmgr,
     Freetype,
     Grub,
+    Which,
+    LibTasn,
+    P11Kit,
+    MakeCa,
+    Wget,
+    PciUtils,
+    Dhcpcd,
 ]

@@ -6,6 +6,8 @@
 # consolidate dir touching to ensure_directory_skeleton
 # try running over an already fully built system
 # check git for which etc files to keep / remove
+# live usb
+# networkin'
 
 import os
 import subprocess
@@ -131,8 +133,6 @@ def remove_excess_temporary_tools():
 
 if __name__ == "__main__":
     os.environ["PATH"] = f"{os.getcwd()}/tools/bin:/usr/bin"
-    # os.environ["LC_ALL"] = "POSIX"
-    # os.environ["CONFIG_SITE"] = f"{os.getcwd()}/usr/share/config.site"
     ensure_directory_skeleton()
     remove_source_trees()
     ensure_sources_downloaded()
